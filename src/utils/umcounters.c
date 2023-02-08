@@ -13,23 +13,23 @@
 #include <umcounters.h>
 #include <fnmatch.h>
 
-umcounter_ctx_t *
-umcounter_new_ctx()
+umc_ctx_t *
+umc_new_ctx()
 {
-    umcounter_ctx_t *ctx = calloc(1, sizeof(umcounter_ctx_t));
+    umc_ctx_t *ctx = calloc(1, sizeof(umc_ctx_t));
     pthread_mutex_init(&ctx->mtx, NULL);
     return ctx;
 }
 
 void
-umcounter_free_ctx(umcounter_ctx_t *ctx)
+umc_free_ctx(umc_ctx_t *ctx)
 {
     if (ctx == NULL) {
         return;
     }
 
-    umcounter_t *c;
-    umcounter_t *tmp;
+    umc_t *c;
+    umc_t *tmp;
 
     // loop counters
     pthread_mutex_lock(&ctx->mtx);
@@ -44,29 +44,28 @@ umcounter_free_ctx(umcounter_ctx_t *ctx)
     free(ctx);
 }
 
-umcounter_t *
-umcounter_new_counter(umcounter_ctx_t *ctx,
-                      const char *id,
-                      enum umcounter_type type)
+umc_t *
+umc_new_counter(umc_ctx_t *ctx, const char *id, enum umc_type type)
 {
     if (ctx == NULL || id == NULL) {
         return NULL;
     }
 
     // check for duplicates
-    umcounter_t *c = NULL;
+    umc_t *c = NULL;
 
     pthread_mutex_lock(&ctx->mtx);
 
     HASH_FIND_STR(ctx->counters, id, c);
     if (c != NULL) {
         pthread_mutex_unlock(&ctx->mtx);
-        return NULL;
+        return c;
     }
 
     // create counter
-    c = calloc(1, sizeof(umcounter_t));
+    c = calloc(1, sizeof(umc_t));
     snprintf(c->id, sizeof(c->id), "%s", id);
+    c->idp = c->id;
     c->type = type;
     pthread_mutex_init(&c->mtx, NULL);
     HASH_ADD_STR(ctx->counters, id, c);
@@ -76,14 +75,14 @@ umcounter_new_counter(umcounter_ctx_t *ctx,
     return c;
 }
 
-umcounter_t *
-umcounter_get(umcounter_ctx_t *ctx, const char *id, bool lock)
+umc_t *
+umc_get(umc_ctx_t *ctx, const char *id, bool lock)
 {
     if (ctx == NULL || id == NULL) {
         return NULL;
     }
 
-    umcounter_t *c = NULL;
+    umc_t *c = NULL;
     if (lock) {
         pthread_mutex_lock(&ctx->mtx);
     }
@@ -98,10 +97,14 @@ umcounter_get(umcounter_ctx_t *ctx, const char *id, bool lock)
 }
 
 static void
-update_value(umcounter_t *c, uint64_t val)
+update_value(umc_t *c, uint64_t val)
 {
     // get previous value
     uint64_t pv = c->values.last.value;
+    // lower value only available fora GAUGE counters
+    if (val <= pv && c->type != UMCT_GAUGE) {
+        return;
+    }
     c->values.last.value = val;
     // update max value and timestamp
     c->values.max = val > pv ? val : pv;
@@ -123,7 +126,7 @@ update_value(umcounter_t *c, uint64_t val)
 }
 
 void
-umcounter_inc(umcounter_t *c, uint64_t val)
+umc_inc(umc_t *c, uint64_t val)
 {
     if (c == NULL) {
         return;
@@ -134,14 +137,14 @@ umcounter_inc(umcounter_t *c, uint64_t val)
     pthread_mutex_unlock(&c->mtx);
 }
 
-umcounter_t *
-umcounter_get_inc(umcounter_ctx_t *ctx, const char *id, uint64_t val, bool lock)
+umc_t *
+umc_get_inc(umc_ctx_t *ctx, const char *id, uint64_t val, bool lock)
 {
     if (lock) {
         pthread_mutex_lock(&ctx->mtx);
     }
 
-    umcounter_t *c = umcounter_get(ctx, id, false);
+    umc_t *c = umc_get(ctx, id, false);
     if (c != NULL) {
         pthread_mutex_lock(&c->mtx);
         update_value(c, c->values.last.value + val);
@@ -156,7 +159,7 @@ umcounter_get_inc(umcounter_ctx_t *ctx, const char *id, uint64_t val, bool lock)
 }
 
 void
-umcounter_set(umcounter_t *c, uint64_t val)
+umc_set(umc_t *c, uint64_t val)
 {
     if (c != NULL) {
         pthread_mutex_lock(&c->mtx);
@@ -165,8 +168,8 @@ umcounter_set(umcounter_t *c, uint64_t val)
     }
 }
 
-umcounter_t *
-umcounter_get_set(umcounter_ctx_t *ctx, const char *id, uint64_t val, bool lock)
+umc_t *
+umc_get_set(umc_ctx_t *ctx, const char *id, uint64_t val, bool lock)
 {
     if (ctx == NULL || id == NULL) {
         return NULL;
@@ -177,7 +180,7 @@ umcounter_get_set(umcounter_ctx_t *ctx, const char *id, uint64_t val, bool lock)
     }
 
     // get counter
-    umcounter_t *c = umcounter_get(ctx, id, false);
+    umc_t *c = umc_get(ctx, id, false);
 
     // update rate and unupdate ts
     if (c != NULL) {
@@ -194,14 +197,10 @@ umcounter_get_set(umcounter_ctx_t *ctx, const char *id, uint64_t val, bool lock)
 }
 
 int
-umcounter_match(umcounter_ctx_t *ctx,
-                const char *ptrn,
-                bool lock,
-                umcounter_cb_t cb,
-                void *arg)
+umc_match(umc_ctx_t *ctx, const char *ptrn, bool lock, umc_cb_t cb, void *arg)
 {
-    umcounter_t *c;
-    umcounter_t *tmp;
+    umc_t *c;
+    umc_t *tmp;
 
     if (lock) {
         pthread_mutex_lock(&ctx->mtx);
@@ -224,13 +223,17 @@ umcounter_match(umcounter_ctx_t *ctx,
 }
 
 double
-umcounter_get_rate(umcounter_t *c)
+umc_get_rate(umc_t *c, bool lock)
 {
 
-    pthread_mutex_lock(&c->mtx);
+    if (lock) {
+        pthread_mutex_lock(&c->mtx);
+    }
     uint64_t tdiff = c->values.ts_diff;
     uint64_t delta = c->values.delta;
-    pthread_mutex_unlock(&c->mtx);
+    if (lock) {
+        pthread_mutex_unlock(&c->mtx);
+    }
 
     if (tdiff > 0 && delta > 0 && c->type == UMCT_INCREMENTAL) {
         return delta / (double)tdiff * 1000000000;
@@ -238,3 +241,21 @@ umcounter_get_rate(umcounter_t *c)
 
     return 0;
 }
+
+void
+umc_lag_start(umc_lag_t *lag)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    lag->ts_start = ts.tv_sec * 1e9 + ts.tv_nsec;
+}
+
+void
+umc_lag_end(umc_lag_t *lag)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    lag->ts_end = ts.tv_sec * 1e9 + ts.tv_nsec;
+    lag->ts_diff = lag->ts_end - lag->ts_start;
+}
+

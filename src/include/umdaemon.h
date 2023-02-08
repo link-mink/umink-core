@@ -55,7 +55,7 @@ struct umdaemon {
     // cmd_args handler
     umd_proc_args_t proc_args;
     // perf context
-    umcounter_ctx_t *perf;
+    umc_ctx_t *perf;
     // user data
     void *data;
 };

@@ -8,8 +8,8 @@
  *
  */
 
-#ifndef UMCOUNTERS_H
-#define UMCOUNTERS_H
+#ifndef UMC_H
+#define UMC_H
 
 #include <inttypes.h>
 #include <time.h>
@@ -19,12 +19,13 @@
 #include <pthread.h>
 
 // consts
-#define UMCOUNTER_NAME_MAX 256
+#define UMC_NAME_MAX 256
 
 // types
-typedef struct umcounter_ctx umcounter_ctx_t;
-typedef struct umcounter umcounter_t;
-typedef struct umcounter_val umcounter_val_t;
+typedef struct umc_ctx umc_ctx_t;
+typedef struct umc umc_t;
+typedef struct umc_val umc_val_t;
+typedef struct umc_lag umc_lag_t;
 
 /**
  * Counter callback
@@ -32,12 +33,13 @@ typedef struct umcounter_val umcounter_val_t;
  * @param[in]   c   Counter object
  * @param[in]   arg User data
  */
-typedef void (*umcounter_cb_t)(umcounter_t *c, void *arg);
+typedef void (*umc_cb_t)(umc_t *c, void *arg);
 
 /**
  * Counter type
  */
-enum umcounter_type {
+enum umc_type
+{
     /** Incremental */
     UMCT_INCREMENTAL = 0,
     /** Gauge (no rate) */
@@ -45,9 +47,9 @@ enum umcounter_type {
 };
 
 /**
- * Couter value descriptor
+ * Counter value descriptor
  */
-struct umcounter_val {
+struct umc_val {
     /** Counter value */
     uint64_t value;
     /** Counter timestamp */
@@ -57,15 +59,17 @@ struct umcounter_val {
 /**
  * Counter descriptor
  */
-struct umcounter {
-    /** Id string */
-    char id[UMCOUNTER_NAME_MAX];
+struct umc {
+    /** Id string buffer */
+    char id[UMC_NAME_MAX];
+    /** id string pointer */
+    char *idp;
     /** Counter type */
-    enum umcounter_type type;
+    enum umc_type type;
     /** Values */
     struct {
         /** Last value */
-        umcounter_val_t last;
+        umc_val_t last;
         /** Maximum value */
         uint64_t max;
         /** Time diff in nsec */
@@ -80,11 +84,23 @@ struct umcounter {
 };
 
 /**
+ * Lag measurement descriptor
+ */
+struct umc_lag {
+    /** Start timestamp in nsec */
+    uint64_t ts_start;
+    /** End timestamp in nsec */
+    uint64_t ts_end;
+    /** Calculated lag in nsec */
+    uint64_t ts_diff;
+};
+
+/**
  * Counter context
  */
-struct umcounter_ctx {
+struct umc_ctx {
     /** Counter map */
-    umcounter_t *counters;
+    umc_t *counters;
     /** Mutex */
     pthread_mutex_t mtx;
 };
@@ -94,14 +110,14 @@ struct umcounter_ctx {
  *
  * @return New counter context
  */
-umcounter_ctx_t *umcounter_new_ctx();
+umc_ctx_t *umc_new_ctx();
 
 /**
  * Free counter context
  *
  * @param[in]   Counter context
  */
-void umcounter_free_ctx(umcounter_ctx_t *ctx);
+void umc_free_ctx(umc_ctx_t *ctx);
 
 /**
  * Create new counter
@@ -110,11 +126,10 @@ void umcounter_free_ctx(umcounter_ctx_t *ctx);
  * @param[in]   id      New counter id
  * @param[in]   type    Counter type
  *
- * @return      New counter object pointer
+ * @return      New counter object or the one already
+ *              bound to this id
  */
-umcounter_t *umcounter_new_counter(umcounter_ctx_t *ctx,
-                                   const char *id,
-                                   enum umcounter_type type);
+umc_t *umc_new_counter(umc_ctx_t *ctx, const char *id, enum umc_type type);
 
 /**
  * Get counter object
@@ -125,7 +140,7 @@ umcounter_t *umcounter_new_counter(umcounter_ctx_t *ctx,
  *
  * @return      Counter object pointer
  */
-umcounter_t *umcounter_get(umcounter_ctx_t *ctx, const char *id, bool lock);
+umc_t *umc_get(umc_ctx_t *ctx, const char *id, bool lock);
 
 /**
  * Get and increment Increment counter value
@@ -137,10 +152,7 @@ umcounter_t *umcounter_get(umcounter_ctx_t *ctx, const char *id, bool lock);
  *
  * @return      Counter object pointer
  */
-umcounter_t *umcounter_get_inc(umcounter_ctx_t *ctx,
-                               const char *id,
-                               uint64_t val,
-                               bool lock);
+umc_t *umc_get_inc(umc_ctx_t *ctx, const char *id, uint64_t val, bool lock);
 
 /**
  * Increment counter value
@@ -148,7 +160,7 @@ umcounter_t *umcounter_get_inc(umcounter_ctx_t *ctx,
  * @param[in]   c       Counter object
  * @param[in]   val     Counter increment value
  */
-void umcounter_inc(umcounter_t *c, uint64_t val);
+void umc_inc(umc_t *c, uint64_t val);
 
 /**
  * Get counter and and set value
@@ -160,10 +172,7 @@ void umcounter_inc(umcounter_t *c, uint64_t val);
  *
  * @return      Counter object pointer
  */
-umcounter_t *umcounter_get_set(umcounter_ctx_t *ctx,
-                               const char *id,
-                               uint64_t val,
-                               bool lock);
+umc_t *umc_get_set(umc_ctx_t *ctx, const char *id, uint64_t val, bool lock);
 
 /**
  * Set counter value
@@ -171,7 +180,7 @@ umcounter_t *umcounter_get_set(umcounter_ctx_t *ctx,
  * @param[in]   c       Counter object
  * @param[in]   val     New counter value
  */
-void umcounter_set(umcounter_t *c, uint64_t val);
+void umc_set(umc_t *c, uint64_t val);
 
 /**
  * Match counter id by using the wildcard pattern
@@ -182,19 +191,31 @@ void umcounter_set(umcounter_t *c, uint64_t val);
  * @param[in]   cb      Callback function to call if matched
  * @param[in]   arg     User data to pass to callback function
  */
-int umcounter_match(umcounter_ctx_t *ctx,
-                    const char *ptrn,
-                    bool lock,
-                    umcounter_cb_t cb,
-                    void *arg);
+int
+umc_match(umc_ctx_t *ctx, const char *ptrn, bool lock, umc_cb_t cb, void *arg);
 
 /**
  * Calculate rate value (per-second value)
  *
  * @param[in]   c       Counter object
+ * @param[in]   lock    Lock mutex
  *
  * @return      Counter rate value
  */
-double umcounter_get_rate(umcounter_t *c);
+double umc_get_rate(umc_t *c, bool lock);
 
-#endif /* ifndef UMCOUNTERS_H */
+/**
+ * Start lag measurement
+ *
+ * @param[out]  lag     Lag descriptor
+ */
+void umc_lag_start(umc_lag_t *lag);
+
+/**
+ * Finish lag measurement
+ *
+ * @param[out]  lag     Lag descriptor
+ */
+void umc_lag_end(umc_lag_t *lag);
+
+#endif /* ifndef UMC_H */
