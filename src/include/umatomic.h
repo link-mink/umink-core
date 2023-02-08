@@ -76,4 +76,16 @@
  * @return	Value before this operation
  */
 #define UM_ATOMIC_COMP_SWAP(v, o, n) __sync_val_compare_and_swap(v, o, n)
+
+/*
+ * @brief Atomic exchange operation
+ *
+ * If the current value (v) is old value (o), then write
+ * new value (n) into value (v)
+ *
+ * @param[in]	new_val		New value
+ * @return	True if comparison was successful
+ */
+#define UM_ATOMIC_BOOL_COMP_SWAP(v, o, n) __sync_bool_compare_and_swap(v, o, n)
+
 #endif /* ifndef UMATOMIC_H */
