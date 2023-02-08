@@ -17,7 +17,7 @@ BinPackArguments: false
 BinPackParameters: false
 AllowShortCaseLabelsOnASingleLine: false
 BreakBeforeBinaryOperators: None
-ColumnLimit: 90
+ColumnLimit: 80
 FixNamespaceComments: true
 NamespaceIndentation: None
 IndentWidth: 4
