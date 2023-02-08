@@ -13,6 +13,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <umcounters.h>
 
 // Max daemon id/type size
 #define UMD_ID_MAX_SZ 30
@@ -53,6 +54,8 @@ struct umdaemon {
     umd_on_init_t on_init;
     // cmd_args handler
     umd_proc_args_t proc_args;
+    // perf context
+    umcounter_ctx_t *perf;
     // user data
     void *data;
 };

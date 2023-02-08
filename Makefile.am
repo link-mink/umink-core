@@ -37,7 +37,9 @@ dist-hook:
 # convenience libraries
 noinst_LTLIBRARIES = libumd.la \
                      libumplg.la \
-                     libumdb.la
+                     libumdb.la \
+		     libumrpc.la \
+		     libumcounters.la
 
 # umink daemon
 libumd_la_SOURCES = src/umd/umdaemon.c
@@ -51,6 +53,14 @@ libumplg_la_CFLAGS = ${COMMON_INCLUDES}
 libumdb_la_SOURCES = src/utils/umdb.c
 libumdb_la_CFLAGS = ${COMMON_INCLUDES}
 libumdb_la_LIBADD = ${SQLITE_LIBS}
+
+# umink counters
+libumcounters_la_SOURCES = src/utils/umcounters.c
+libumcounters_la_CFLAGS = ${COMMON_INCLUDES}
+
+# umink rpc
+libumrpc_la_SOURCES = src/utils/umrpc.c
+libumrpc_la_CFLAGS = ${COMMON_INCLUDES}
 
 # programs and libraries
 bin_PROGRAMS = sysagentd
@@ -70,7 +80,10 @@ sysagentd_CFLAGS = ${COMMON_INCLUDES} \
 sysagentd_LDFLAGS = -export-dynamic
 sysagentd_LDADD = libumd.la \
                   libumplg.la \
+		  libumrpc.la \
+		  libumcounters.la \
                   ${JSON_C_LIBS} \
+		  ${COAP_LIBS} \
                   -ldl
 
 # cleanup rule

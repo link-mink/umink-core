@@ -22,7 +22,6 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_LANG([C])
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC
-AC_PROG_CC_C99
 AC_PROG_AWK
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
@@ -121,6 +120,11 @@ AC_CHECK_LIB([pthread],
 # /* json-c */
 # /**********/
 PKG_CHECK_MODULES([JSON_C], [json-c], [], [AC_MSG_ERROR([json-c not found!])])
+
+# /********/
+# /* coap */
+# /********/
+PKG_CHECK_MODULES([COAP], [libcoap-3], [], [AC_MSG_ERROR([libcoap-3 not found!])])
 
 # /****************************/
 # /* Checks for header files. */
