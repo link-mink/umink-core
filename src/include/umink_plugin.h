@@ -35,45 +35,84 @@ typedef struct umplg_cmd_map umplg_cmd_map_t;
 #define UMPLG_CMD_HNDLR_LOCAL "run_local"
 #define UMPLG_CMD_LST         "COMMANDS"
 
-// plugin CMD ids
+/**
+ * Plugin CMD ids
+ */
 enum umplg_cmd_t
 {
+    /** Unknown */
     UNKNWON_COMMAND = 0,
+    /** Get system info */
     CMD_GET_SYSINFO = 1,
+    /** Get CPU stats */
     CMD_GET_CPUSTATS = 2,
+    /** Get memory usage */
     CMD_GET_MEMINFO = 3,
+    /** Get system uname string */
     CMD_GET_UNAME = 4,
+    /** Get list of processes */
     CMD_GET_PROCESS_LST = 5,
+    /** Get file info */
     CMD_GET_FILE_STAT = 6,
+    /** Invoke ubus call */
     CMD_UBUS_CALL = 7,
+    /** Run shell exec */
     CMD_SHELL_EXEC = 8,
+    /** Set generic data */
     CMD_SET_DATA = 9,
+    /** Run generic rules */
     CMD_RUN_RULES = 10,
+    /** Load generic rules */
     CMD_LOAD_RULES = 11,
+    /** AUthenticate */
     CMD_AUTH = 12,
+    /** Setup proxy socket */
     CMD_SOCKET_PROXY = 13,
+    /** Request firmware update */
     CMD_FIRMWARE_UPDATE = 14,
+    /** Start syslog */
     CMD_SYSLOG_START = 15,
+    /** Stop syslog */
     CMD_SYSLOG_STOP = 16,
+    /** Start remote execution */
     CMD_REMOTE_EXEC_START = 17,
+    /** Stop remote execution */
     CMD_REMOTE_EXEC_STOP = 18,
+    /** Get system monitor data */
     CMD_GET_SYSMON_DATA = 19,
+    /** Generic TCP SEND */
     CMD_NET_TCP_SEND = 20,
+    /** Create cgroup2 group */
     CMD_CG2_GROUP_CREATE = 21,
+    /** Delete cgroup2 group */
     CMD_CG2_GROUP_DELETE = 22,
+    /** Get cgroup2 groups */
     CMD_CG2_GROUPS_LST = 23,
+    /** Get cgroup2 controller */
     CMD_CG2_CONTROLLER_GET = 24,
+    /** Set cgroup2 controller */
     CMD_CG2_CONTROLLER_SET = 25,
+    /** Get cgroup2 controllers */
     CMD_CG2_CONTROLLERS_LST = 26,
+    /** Get firewall zones */
     CMD_SYSD_FWLD_GET_ZONES = 27,
+    /** Get firewall rules */
     CMD_SYSD_FWLD_GET_RICH_RULES = 28,
+    /** Add firewall rule */
     CMD_SYSD_FWLD_ADD_RICH_RULE = 29,
+    /** Delete firewall rule */
     CMD_SYSD_FWLD_DEL_RICH_RULE = 30,
+    /** Reload firewall */
     CMD_SYSD_FWLD_RELOAD = 31,
+    /** Write one bit using modbus */
     CMD_MODBUS_WRITE_BIT = 32,
+    /** Read bits using modbus */
     CMD_MODBUS_READ_BITS = 33,
+    /** Get NDPI statistics */
     CMD_NDPI_GET_STATS = 34,
+    /** Publish via MQTT */
     CMD_MQTT_PUBLISH = 35,
+    /** Ivoke Lua call */
     CMD_LUA_CALL = 36
 };
 
@@ -123,7 +162,7 @@ typedef int (*umplg_shfn_init_t)(umplg_sh_t *shd);
  * @param[in]       d_in      Pointer to plugin standard input data
  * @param[in,out]   d_out     Output data buffer pointer
  * @param[in,out]   out_sz    Output data size pointer
- * @return      0 for success
+ * @return          0 for success
  */
 typedef int (*umplg_shfn_run_t)(umplg_sh_t *shd,
                                 umplg_data_std_t *d_in,
@@ -137,53 +176,59 @@ typedef int (*umplg_shfn_run_t)(umplg_sh_t *shd,
  */
 typedef int (*umplg_shfn_term_t)(umplg_sh_t *shd);
 
-// string -> CMD id map
+/** String/CMD mapping */
 struct umplg_cmd_map {
+    /** CMD id */
     int id;
+    /** CMD name */
     const char *name;
     UT_hash_handle hh;
 };
 
-// input data type for local interface
+/** Input data type for local interface */
 enum umplgd_t
 {
-    // unknown data type (error)
+    /** unknown data type (error) */
     UMPLG_DT_UNKNOWN = 0,
-    // JSON-RPC (UNIX socket)
+    /** JSON-RPC (UNIX socket) */
     UMPLG_DT_JSON_RPC = 1,
-    // plugin-specific (custom plugin2plugin)
+    /** plugin-specific (custom plugin2plugin) */
     UMPLG_DT_SPECIFIC = 2,
-    // plugin-to-plugin standard in/out format
-    // (standard plugin2plugin)
+    /** plugin-to-plugin standard in/out format */
     UMPLG_DT_STANDARD = 4
 };
 
-// stamdard data item
+/** Standard data item */
 struct umplg_data_std_item {
-    // name = value
+    /** Item name */
     char *name;
+    /** Item value */
     char *value;
     // hashable
     UT_hash_handle hh;
 };
 
-// standard data items
+/** Standard data items */
 struct umplg_data_std_items {
+    /** Items hashmap */
     umplg_data_std_item_t *table;
 };
 
-// standard data descriptor
+/** Standard data descriptor */
 struct umplg_data_std {
+    /** Items array */
     UT_array *items;
 };
 
-// input data descriptor
+/** Input data descriptor */
 struct umplg_idata {
+    /** Item type */
     enum umplgd_t type;
+    /** Item data */
     void *data;
 };
 
-// plugin descriptor
+/** Plugin descriptor */
 struct umplgd {
     /** Plugin handle */
     void *handle;
@@ -203,51 +248,62 @@ struct umplgd {
     UT_hash_handle hh;
 };
 
-// hook descriptor
+/** Hook descriptor */
 struct umplg_hkd {
-    // id
+    /** Id */
     int id;
-    // plugin pointer
+    /** Plugin pointer */
     umplgd_t *plgp;
     // hashable
     UT_hash_handle hh;
 };
 
-// signal handler descriptor
+/** Signal handler descriptor */
 struct umplg_sh {
-    // signal id
+    /** Signal id */
     char *id;
-    // singal invocation method
+    /** Signal invocation init */
     umplg_shfn_init_t init;
+    /** Signal invocation run */
     umplg_shfn_run_t run;
+    /** Signal invocation terminate */
     umplg_shfn_term_t term;
-    // extra args
+    /** Extra arguments */
     UT_array *args;
+    /** Running flag */
     bool running;
-    // lock
+    /** Lock */
     pthread_mutex_t mtx;
     // hashable
     UT_hash_handle hh;
 };
 
-// plugin manager descriptor
+/** Plugin manager descriptor */
 struct umplg_mngr {
-    // array of registered plugins
+    /** Array of registered plugins */
     UT_array *plgs;
-    // hashmap of plugin <-> hook mappings
+    /** Hashmap of plugin <-> hook mappings */
     umplg_hkd_t *hooks;
-    // hasmap of registered signals
+    /** Hasmap of registered signals */
     umplg_sh_t *signals;
-    // cmd str -> cmd id
+    /** CMD str -> CMD id */
     umplg_cmd_map_t *cmd_map;
-    // configuration data
+    /** Configuration data */
     void *cfg;
 };
 
-// create plugin manager
+/**
+ * Create new plugin manager
+ *
+ * @return  New plugin manager
+ */
 umplg_mngr_t *umplg_new_mngr();
 
-// free plugin manager
+/**
+ * Free plugin manager
+ *
+ * @param[in]   pm  Plugin manager
+ */
 void umplg_free_mngr(umplg_mngr_t *pm);
 
 /**
@@ -277,25 +333,84 @@ int umplg_unload(umplg_mngr_t *pm, umplgd_t *pd);
  *
  * @return      0 for success or error code
  */
-int umplg_run(umplg_mngr_t *pm, int cmd_id, int idt, umplg_idata_t *data, bool is_local);
+int umplg_run(umplg_mngr_t *pm,
+              int cmd_id,
+              int idt,
+              umplg_idata_t *data,
+              bool is_local);
 
 // register signal handler
+/**
+ * Register signal handler
+ *
+ * @param[in]   pm      Plugin manager
+ * @param[in]   sh      Signal handler
+ *
+ * @return      0 for success or error code
+ */
 int umplg_reg_signal(umplg_mngr_t *pm, umplg_sh_t *sh);
 
-// process signal
+/**
+ * Process signal
+ *
+ * @param[in]   pm      Plugin manager
+ * @param[in]   s       Signal name
+ * @param[in]   d_in    Signal input data
+ * @param[out]  d_out   Signal output buffer
+ * @param[out]  out_sz  Signal output data size
+ *
+ * @return      0 for success or error code
+ */
 int umplg_proc_signal(umplg_mngr_t *pm,
                       const char *s,
                       umplg_data_std_t *d_in,
                       char **d_out,
                       size_t *out_sz);
 
-// standard data type
+/**
+ * Add items to standard data descriptor
+ *
+ * @param[in]   data    Standard data item
+ * @param[in]   items   Standard data items
+ *
+ * @return      0 for success or error code
+ */
 int umplg_stdd_items_add(umplg_data_std_t *data, umplg_data_std_items_t *items);
-int umplg_stdd_item_add(umplg_data_std_items_t *items, umplg_data_std_item_t *item);
+
+/**
+ * Add standard item to standard items
+ *
+ * @param[in]   items   Standard data items
+ * @param[in]   item    Standard data item
+ *
+ * @return      0 for success or error code
+ */
+int umplg_stdd_item_add(umplg_data_std_items_t *items,
+                        umplg_data_std_item_t *item);
+
+/**
+ * Init standard data descriptor
+ *
+ * @param[in]  data    Standard data
+ */
 void umplg_stdd_init(umplg_data_std_t *data);
+
+/**
+ * Free standard data descriptor
+ *
+ * @param[in]  data    Standard data
+ */
+
 void umplg_stdd_free(umplg_data_std_t *data);
 
-// cmd id
+/**
+ * Get CMD string from CMD id
+ *
+ * @param[in]   pm      Plugin manager
+ * @param[in]   cmd_str CMD string
+ *
+ * @return      CMD id
+ */
 int umplg_get_cmd_id(umplg_mngr_t *pm, const char *cmd_str);
 
 #endif /* ifndef UMINK_PLUGIN */
