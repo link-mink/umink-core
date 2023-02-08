@@ -122,9 +122,16 @@ AC_CHECK_LIB([pthread],
 PKG_CHECK_MODULES([JSON_C], [json-c], [], [AC_MSG_ERROR([json-c not found!])])
 
 # /********/
-# /* coap */
+# /* CoAP */
 # /********/
-PKG_CHECK_MODULES([COAP], [libcoap-3], [], [AC_MSG_ERROR([libcoap-3 not found!])])
+AC_ARG_ENABLE(coap,
+              [AS_HELP_STRING([--enable-coap], [Enable CoAP [default=no]])],,
+              [enable_coap=no])
+AM_CONDITIONAL(ENABLE_COAP, test "x$enable_coap" = "xyes")
+if test "x$enable_coap" != "xno"; then
+    AC_DEFINE([ENABLE_COAP], [1], [Enable COAP])
+    PKG_CHECK_MODULES([COAP], [libcoap-3], [], [AC_MSG_ERROR([libcoap-3 not found!])])
+fi
 
 # /****************************/
 # /* Checks for header files. */

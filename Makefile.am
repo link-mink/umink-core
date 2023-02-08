@@ -38,8 +38,10 @@ dist-hook:
 noinst_LTLIBRARIES = libumd.la \
                      libumplg.la \
                      libumdb.la \
-		     libumrpc.la \
 		     libumcounters.la
+if ENABLE_COAP
+noinst_LTLIBRARIES += libumrpc.la
+endif
 
 # umink daemon
 libumd_la_SOURCES = src/umd/umdaemon.c
@@ -59,8 +61,10 @@ libumcounters_la_SOURCES = src/utils/umcounters.c
 libumcounters_la_CFLAGS = ${COMMON_INCLUDES}
 
 # umink rpc
+if ENABLE_COAP
 libumrpc_la_SOURCES = src/utils/umrpc.c
 libumrpc_la_CFLAGS = ${COMMON_INCLUDES}
+endif
 
 # programs and libraries
 bin_PROGRAMS = sysagentd
@@ -80,11 +84,12 @@ sysagentd_CFLAGS = ${COMMON_INCLUDES} \
 sysagentd_LDFLAGS = -export-dynamic
 sysagentd_LDADD = libumd.la \
                   libumplg.la \
-		  libumrpc.la \
 		  libumcounters.la \
                   ${JSON_C_LIBS} \
-		  ${COAP_LIBS} \
                   -ldl
+if ENABLE_COAP
+sysagentd_LDADD += libumrpc.la
+endif
 
 # cleanup rule
 distclean-local: distclean-ax-prefix-umink-pkg-config-h
