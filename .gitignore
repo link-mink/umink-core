@@ -39,3 +39,4 @@ config.sub
 umink_pkg_config.h
 tags
 *.pyc
+.version
