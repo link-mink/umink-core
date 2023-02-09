@@ -18,6 +18,10 @@
 #include <umink_plugin.h>
 #include <dirent.h>
 #include <json_tokener.h>
+#include <umcounters.h>
+#ifdef ENABLE_COAP
+#include <umrpc.h>
+#endif
 
 // daemon name and description
 const char *UMD_TYPE = "umsysagent";
@@ -33,6 +37,7 @@ typedef struct {
     const char *plg_pth;
     umplg_mngr_t *pm;
     struct json_object *cfg;
+    umc_ctx_t *perf;
 } sysagentdd_t;
 
 // help
@@ -240,6 +245,7 @@ main(int argc, char **argv)
                         .pm = umplg_new_mngr() };
     umd->data = &dd;
     dd.pm->cfg = dd.cfg;
+    umd->perf = umc_new_ctx();
     // process command line arguments
     proc_args(umd, argc, argv);
     // signal handler
@@ -253,6 +259,7 @@ main(int argc, char **argv)
     // cleanup
     umplg_free_mngr(dd.pm);
     json_object_put(dd.cfg);
+    umc_free_ctx(umd->perf);
     umd_destroy(umd);
     // normal exit
     return 0;
