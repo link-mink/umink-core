@@ -92,10 +92,6 @@ AM_CONDITIONAL(ENABLE_MOSQUITTO_AUTH, test "x$enable_mosquitto_auth" = "xyes")
 if test "x$enable_mosquitto_auth" != "xno"; then
     AC_DEFINE([ENABLE_MOSQUITTO_AUTH], [1], [Enable Mosquitto Auth])
     AC_CHECK_HEADERS([mosquitto.h mosquitto_plugin.h], ,AC_MSG_ERROR([mosquitto headers not found!]))
-    AC_CHECK_LIB([sqlite3],
-                 [sqlite3_open],
-                 [AC_SUBST([SQLITE_LIBS], ["-lsqlite3"])],
-                 [AC_MSG_ERROR([sqlite3 library not found!])])
 fi
 
 # /******/
@@ -120,6 +116,14 @@ AC_CHECK_LIB([pthread],
 # /* json-c */
 # /**********/
 PKG_CHECK_MODULES([JSON_C], [json-c], [], [AC_MSG_ERROR([json-c not found!])])
+
+# /***********/
+# /* sqlite3 */
+# /***********/
+AC_CHECK_LIB([sqlite3],
+             [sqlite3_open],
+             [AC_SUBST([SQLITE_LIBS], ["-lsqlite3"])],
+             [AC_MSG_ERROR([sqlite3 library not found!])])
 
 # /********/
 # /* CoAP */

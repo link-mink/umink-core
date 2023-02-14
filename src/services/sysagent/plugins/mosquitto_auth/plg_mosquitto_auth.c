@@ -44,7 +44,7 @@ mosquitto_auth_plugin_init(void **user_data, struct mosquitto_opt *opts, int opt
         return MOSQ_ERR_AUTH;
     }
     // create umdbm and connect
-    dbm = umdb_mngr_new(db_name);
+    dbm = umdb_mngr_new(db_name, false);
     if (dbm == NULL) {
         mosquitto_log_printf(MOSQ_LOG_ERR, "plg_mosquitto_auth: error while connecting");
         return MOSQ_ERR_AUTH;

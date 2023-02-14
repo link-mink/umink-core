@@ -12,6 +12,8 @@
 #define UMDB
 
 #include <sqlite3.h>
+#include <stdbool.h>
+#include <stddef.h>
 
 // types
 typedef struct umdb_mngr_d umdb_mngrd_t;
@@ -60,10 +62,11 @@ struct umdb_uauth_d {
  * Create new DB manager
  *
  * @param[in]   db  Database name
+ * @param[in]   mem In-memory flag
  *
  * @return      New DB manager
  */
-umdb_mngrd_t *umdb_mngr_new(const char *db);
+umdb_mngrd_t *umdb_mngr_new(const char *db, bool mem);
 
 /**
  * Free DB manager
@@ -97,5 +100,47 @@ int umdb_mngr_uauth(umdb_mngrd_t *m,
  * @return      0 for success or error code
  */
 int umdb_mngr_uget(umdb_mngrd_t *m, umdb_uauth_d_t *res, const char *u);
+
+/**
+ * Init custom user storage
+ *
+ * @param[in]   m   DB manager
+ * @param[in]   n   User DB name
+ *
+ * @return      0 for success or error code
+ */
+int umdb_mngr_store_init(umdb_mngrd_t *m, const char *n);
+
+/**
+ * Set custom storage data
+ *
+ * @param[in]   m   DB manager
+ * @param[in]   db  User DB name
+ * @param[in]   k   Data key
+ * @param[in]   v   Data value
+ *
+ * @return      0 for success or error code
+ */
+int umdb_mngr_store_set(umdb_mngrd_t *m,
+                        const char *db,
+                        const char *k,
+                        const char *v);
+
+/**
+ * Get custom storage data
+ *
+ * @param[in]   m       DB manager
+ * @param[in]   db      User DB name
+ * @param[in]   k       Data key
+ * @param[out]  out     Output buffer
+ * @param[out]  out_sz  Output buffer size
+ *
+ * @return      0 for success or error code
+ */
+int umdb_mngr_store_get(umdb_mngrd_t *m,
+                        const char *db,
+                        const char *k,
+                        char **out,
+                        size_t *out_sz);
 
 #endif /* ifndef UMDB */
