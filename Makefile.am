@@ -76,6 +76,7 @@ sysagentd_SOURCES = src/services/sysagent/sysagentd.c \
                     src/include/umdaemon.h \
                     src/include/umdb.h \
                     src/include/umink_plugin.h \
+                    src/include/umcounters.h \
                     src/include/utarray.h \
                     src/include/uthash.h
 sysagentd_CFLAGS = ${COMMON_INCLUDES} \
@@ -89,6 +90,7 @@ sysagentd_LDADD = libumd.la \
                   -ldl
 if ENABLE_COAP
 sysagentd_LDADD += libumrpc.la
+sysagentd_SOURCES += src/include/umrpc.h
 endif
 
 # cleanup rule
