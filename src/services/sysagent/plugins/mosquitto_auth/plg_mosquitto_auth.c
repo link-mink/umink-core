@@ -9,6 +9,7 @@
  */
 
 #include <string.h>
+#include <mosquitto_broker.h>
 #include <mosquitto.h>
 #include <mosquitto_plugin.h>
 #include <umdb.h>
