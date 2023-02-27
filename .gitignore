@@ -8,6 +8,8 @@ dist
 *.o
 *.la
 *.lo
+*.so
+sysagentd
 .deps
 .libs
 m4/
