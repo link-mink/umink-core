@@ -30,7 +30,9 @@ mosquitto_auth_plugin_version()
 // has been called.  This will only ever be called once and can be used to
 // initialise the plugin.
 int
-mosquitto_auth_plugin_init(void **user_data, struct mosquitto_opt *opts, int opt_count)
+mosquitto_auth_plugin_init(void **user_data,
+                           struct mosquitto_opt *opts,
+                           int opt_count)
 {
     // process options
     for (int i = 0; i < opt_count; i++) {
@@ -47,7 +49,8 @@ mosquitto_auth_plugin_init(void **user_data, struct mosquitto_opt *opts, int opt
     // create umdbm and connect
     dbm = umdb_mngr_new(db_name, false);
     if (dbm == NULL) {
-        mosquitto_log_printf(MOSQ_LOG_ERR, "plg_mosquitto_auth: error while connecting");
+        mosquitto_log_printf(MOSQ_LOG_ERR,
+                             "plg_mosquitto_auth: error while connecting");
         return MOSQ_ERR_AUTH;
     }
 
@@ -85,7 +88,8 @@ mosquitto_auth_security_init(void *user_data,
 // 1. When the broker is shutting down.
 // 2. If the broker is requested to reload its configuration whilst running.
 //    In this case, this function will be called, followed by
-//    mosquitto_auth_security_init. In this situation, the reload parameter will be true.
+//    mosquitto_auth_security_init. In this situation, the reload parameter will
+//    be true.
 int
 mosquitto_auth_security_cleanup(void *user_data,
                                 struct mosquitto_opt *opts,
@@ -117,7 +121,8 @@ mosquitto_auth_unpwd_check(void *user_data,
         }
 
     } else {
-        mosquitto_log_printf(MOSQ_LOG_ERR, "plg_mosquitto_auth: cannot authenicate user");
+        mosquitto_log_printf(MOSQ_LOG_ERR,
+                             "plg_mosquitto_auth: cannot authenicate user");
         return MOSQ_ERR_AUTH;
     }
 
@@ -160,7 +165,8 @@ mosquitto_auth_acl_check(void *user_data,
         }
 
     } else {
-        mosquitto_log_printf(MOSQ_LOG_ERR, "plg_mosquitto_auth: cannot authenicate user");
+        mosquitto_log_printf(MOSQ_LOG_ERR,
+                             "plg_mosquitto_auth: cannot authenicate user");
         return MOSQ_ERR_AUTH;
     }
 

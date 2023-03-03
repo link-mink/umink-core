@@ -89,6 +89,7 @@ AC_ARG_ENABLE(mosquitto-auth,
               [AS_HELP_STRING([--enable-mosquitto-auth], [Enable Mosquitto Auth [default=no]])],,
               [enable_mosquitto_auth=no])
 AM_CONDITIONAL(ENABLE_MOSQUITTO_AUTH, test "x$enable_mosquitto_auth" = "xyes")
+mosquitto_plg_v5=no
 if test "x$enable_mosquitto_auth" != "xno"; then
     AC_DEFINE([ENABLE_MOSQUITTO_AUTH], [1], [Enable Mosquitto Auth])
     AC_CHECK_HEADERS([mosquitto.h mosquitto_plugin.h],
@@ -98,6 +99,19 @@ if test "x$enable_mosquitto_auth" != "xno"; then
                       #include <mosquitto.h>
                       #include <mosquitto_plugin.h>
                      ])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
+                       [#include <mosquitto_broker.h>
+                        #include <mosquitto.h>
+                        #include <mosquitto_plugin.h>
+                       ],
+                       [#ifndef MOSQ_PLUGIN_VERSION
+                        #error "mosquitto_plugin v5 required"
+                        #endif
+                       ])], [mosquitto_plg_v5=yes])
+fi
+AM_CONDITIONAL(ENABLE_MOSQUITTO_PLUGIN_V5, test "x$mosquitto_plg_v5" = "xyes")
+if test "x$mosquitto_plg_v5" = "xyes"; then
+    AC_DEFINE([ENABLE_MOSQUITTO_PLUGIN_V5], [1], [Enable MOSQUITTO v5 plugin])
 fi
 
 # /******/
