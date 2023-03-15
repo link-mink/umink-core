@@ -42,3 +42,4 @@ umink_pkg_config.h
 tags
 *.pyc
 .version
+Session.vim
