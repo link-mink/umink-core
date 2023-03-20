@@ -108,6 +108,8 @@ mqtt_on_rx(void *ctx, char *t, int t_sz, MQTTAsync_message *msg)
     // cleanup
     MQTTAsync_freeMessage(&msg);
     MQTTAsync_free(t);
+    HASH_CLEAR(hh, items.table);
+    umplg_stdd_free(&e_d);
     return 1;
 }
 
