@@ -197,7 +197,7 @@ mqtt_conn_pub(struct mqtt_conn_d *conn,
     opts.context = conn;
     pubmsg.payload = (void *)d;
     pubmsg.payloadlen = d_sz;
-    pubmsg.qos = 1;
+    pubmsg.qos = 0;
     pubmsg.retained = retain;
     // send
     if (MQTTAsync_sendMessage(conn->client, t, &pubmsg, &opts) != MQTTASYNC_SUCCESS) {
