@@ -134,6 +134,12 @@ mqtt_conn_connect(struct mqtt_conn_d *conn, struct json_object *j_conn)
     // username and password
     struct json_object *j_usr = json_object_object_get(j_conn, "username");
     struct json_object *j_pwd = json_object_object_get(j_conn, "password");
+    // keep-alive interval
+    struct json_object *j_ka = json_object_object_get(j_conn, "keep_alive");
+    int ka = 20;
+    if (j_ka != NULL && json_object_is_type(j_ka, json_type_int)) {
+        ka = json_object_get_int(j_ka);
+    }
 
     // mqtt connec tion setup
     MQTTAsync_connectOptions conn_opts = MQTTAsync_connectOptions_initializer;
@@ -153,7 +159,7 @@ mqtt_conn_connect(struct mqtt_conn_d *conn, struct json_object *j_conn)
         return 2;
     }
     // connection options
-    conn_opts.keepAliveInterval = 20;
+    conn_opts.keepAliveInterval = ka;
     conn_opts.cleansession = 1;
     conn_opts.onSuccess = NULL;
     conn_opts.onFailure = NULL;
