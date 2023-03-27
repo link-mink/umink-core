@@ -21,6 +21,8 @@
 #include <json_object.h>
 #include <utarray.h>
 #include <MQTTAsync.h>
+#include <spscq.h>
+#include <semaphore.h>
 
 /*************/
 /* Plugin ID */
@@ -35,6 +37,7 @@ int COMMANDS[] = { CMD_MQTT_PUBLISH,
                    -1 };
 
 static const char *SIG_MQTT_RX = "mqtt:RX";
+static const int SIG_SEM_TIMEOUT = 5;
 
 /******************************/
 /* MQTT connection descriptor */
@@ -48,6 +51,14 @@ struct mqtt_conn_d {
     umplg_mngr_t *pm;
     // mqtt topics
     UT_array *topics;
+    // signal thread
+    pthread_t sig_th;
+    // signal thread q
+    spsc_qd_t *sig_q;
+    // signal queue size
+    int sig_qsz;
+    // signal thread semaphore
+    sem_t sig_sem;
     // hashable
     UT_hash_handle hh;
 };
@@ -65,6 +76,7 @@ struct mqtt_conn_mngr {
 // fwd declarations
 static int mqtt_conn_sub(struct mqtt_conn_d *conn, const char *t);
 static int mqtt_conn_connect(struct mqtt_conn_d *conn, struct json_object *j_conn);
+static void *mqtt_proc_thread(void *arg);
 
 // globals
 struct mqtt_conn_mngr *mqtt_mngr = NULL;
@@ -79,6 +91,55 @@ mqtt_conn_new(umplg_mngr_t *pm)
     return c;
 }
 
+static void *
+mqtt_proc_thread(void *args)
+{
+    // context
+    struct mqtt_conn_d *conn = args;
+    umplg_data_std_t *data = NULL;
+    struct timespec ts = { 0, 1000000 };
+
+#if defined(__GNUC__) && defined(__linux__)
+#    if __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 12
+    pthread_setname_np(conn->sig_th, "umink_mqtt_proc");
+#    endif
+#endif
+
+    while (!umd_is_terminating()) {
+        // get semaphore timeout
+        if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
+            umd_log(UMD,
+                    UMD_LLT_ERROR,
+                    "plg_mqtt: [(%s) CLOCK_REALTIME error, terminating...",
+                    conn->name);
+            exit(EXIT_FAILURE);
+        }
+        // set semaphore timeout
+        ts.tv_sec += SIG_SEM_TIMEOUT;
+
+        // wait on semaphore
+        sem_timedwait(&conn->sig_sem, &ts);
+        // check if process is terminating
+        if (umd_is_terminating()) {
+            return NULL;
+        }
+
+        // check queue
+        if (spscq_pop(conn->sig_q, (void **)&data) == 0) {
+            // output buffer
+            char *b = NULL;
+            size_t b_sz = 0;
+            // process signal
+            umplg_proc_signal(conn->pm, SIG_MQTT_RX, data, &b, &b_sz);
+            // cleanup
+            umplg_stdd_free(data);
+            free(data);
+        }
+    }
+
+    return NULL;
+}
+
 static int
 mqtt_on_rx(void *ctx, char *t, int t_sz, MQTTAsync_message *msg)
 {
@@ -89,27 +150,35 @@ mqtt_on_rx(void *ctx, char *t, int t_sz, MQTTAsync_message *msg)
     memcpy(s, msg->payload, msg->payloadlen);
     s[msg->payloadlen] = '\0';
     // data
-    umplg_data_std_t e_d = { .items = NULL };
+    umplg_data_std_t *e_d = calloc(1, sizeof(umplg_data_std_t));
     umplg_data_std_items_t items = { .table = NULL };
     umplg_data_std_item_t item_topic = { .name = "mqtt_topic", .value = t };
     umplg_data_std_item_t item_pld = { .name = "mqtt_payload", .value = s };
     // create signal input data
-    umplg_stdd_init(&e_d);
+    umplg_stdd_init(e_d);
     umplg_stdd_item_add(&items, &item_topic);
     umplg_stdd_item_add(&items, &item_pld);
-    umplg_stdd_items_add(&e_d, &items);
+    umplg_stdd_items_add(e_d, &items);
 
-    // output buffer
-    char *b = NULL;
-    size_t b_sz = 0;
-    // process signal
-    umplg_proc_signal(conn->pm, SIG_MQTT_RX, &e_d, &b, &b_sz);
+    // push to sig proc thread
+    if (spscq_push(conn->sig_q, 1, e_d) != 0) {
+        // cleanup
+        umplg_stdd_free(e_d);
+        free(e_d);
+        umd_log(UMD,
+                UMD_LLT_WARNING,
+                "plg_mqtt: [(%s) SIGPROC queue full",
+                conn->name);
+
+    } else {
+        sem_post(&conn->sig_sem);
+    }
 
     // cleanup
     MQTTAsync_freeMessage(&msg);
     MQTTAsync_free(t);
     HASH_CLEAR(hh, items.table);
-    umplg_stdd_free(&e_d);
+
     return 1;
 }
 
@@ -197,7 +266,7 @@ mqtt_conn_pub(struct mqtt_conn_d *conn,
     opts.context = conn;
     pubmsg.payload = (void *)d;
     pubmsg.payloadlen = d_sz;
-    pubmsg.qos = 0;
+    pubmsg.qos = 1;
     pubmsg.retained = retain;
     // send
     if (MQTTAsync_sendMessage(conn->client, t, &pubmsg, &opts) != MQTTASYNC_SUCCESS) {
@@ -247,6 +316,8 @@ mqtt_mngr_add_conn(struct mqtt_conn_mngr *m, umplg_mngr_t *pm, struct json_objec
     struct json_object *j_addr = json_object_object_get(j_conn, "address");
     // label
     struct json_object *j_name = json_object_object_get(j_conn, "name");
+    // proc thread queue size
+    struct json_object *j_pth_qsz = json_object_object_get(j_conn, "proc_thread_qsize");
     // sanity check
     if (j_addr == NULL || j_name == NULL) {
         return NULL;
@@ -257,9 +328,17 @@ mqtt_mngr_add_conn(struct mqtt_conn_mngr *m, umplg_mngr_t *pm, struct json_objec
     if (tmp_conn != NULL) {
         return NULL;
     }
-    // new mqtt connectino
+    // new mqtt connection
     struct mqtt_conn_d *c = mqtt_conn_new(pm);
     c->name = strdup(json_object_get_string(j_name));
+    // queue size optional (default = 256)
+    c->sig_qsz = json_object_get_int(j_pth_qsz);
+    if (c->sig_qsz < 256) {
+        c->sig_qsz = 256;
+    }
+    c->sig_q = spscq_new(c->sig_qsz);
+    sem_init(&c->sig_sem, 0, 0);
+    pthread_create(&c->sig_th, NULL, &mqtt_proc_thread, c);
     // lock
     pthread_mutex_lock(&m->mtx);
     // add to conn list
@@ -295,6 +374,9 @@ mqtt_mngr_del_conn(struct mqtt_conn_mngr *m, const char *name, bool th_safe)
     }
     HASH_FIND_STR(m->conns, name, tmp_conn);
     if (tmp_conn != NULL) {
+        pthread_join(tmp_conn->sig_th, NULL);
+        sem_destroy(&tmp_conn->sig_sem);
+        spscq_free(tmp_conn->sig_q);
         HASH_DEL(m->conns, tmp_conn);
         MQTTAsync_destroy(&tmp_conn->client);
         free(tmp_conn->name);
@@ -376,6 +458,7 @@ process_cfg(umplg_mngr_t *pm, struct mqtt_conn_mngr *mngr)
             struct json_object *j_clid = json_object_object_get(j_conn, "client_id");
             struct json_object *j_usr = json_object_object_get(j_conn, "username");
             struct json_object *j_pwd = json_object_object_get(j_conn, "password");
+            struct json_object *j_pth_qsz = json_object_object_get(j_conn, "proc_thread_qsize");
             // all values are mandatory
             if (!(j_n && j_addr && j_clid && j_usr && j_pwd)) {
                 umd_log(UMD,
@@ -395,6 +478,16 @@ process_cfg(umplg_mngr_t *pm, struct mqtt_conn_mngr *mngr)
                         "plg_mqtt: [malformed MQTT connection (wrong type)]");
                 return 6;
             }
+            // proc thread queue size
+            if (j_pth_qsz != NULL) {
+                if (!json_object_is_type(j_pth_qsz, json_type_int)) {
+                    umd_log(UMD,
+                            UMD_LLT_ERROR,
+                            "plg_mqtt: [wrong type for 'proc_thread_qsize']");
+                    return 6;
+                }
+            }
+
             // create MQTT connection
             struct mqtt_conn_d *conn = mqtt_mngr_add_conn(mngr, pm, j_conn);
             if (!conn) {

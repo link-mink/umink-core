@@ -77,6 +77,7 @@ sysagentd_SOURCES = src/services/sysagent/sysagentd.c \
                     src/include/umdb.h \
                     src/include/umink_plugin.h \
                     src/include/umcounters.h \
+                    src/include/spscq.h \
                     src/include/utarray.h \
                     src/include/uthash.h
 sysagentd_CFLAGS = ${COMMON_INCLUDES} \
