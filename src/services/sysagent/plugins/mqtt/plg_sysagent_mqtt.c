@@ -187,6 +187,11 @@ mqtt_on_connect(void *context, char *cause)
 {
     // context
     struct mqtt_conn_d *conn = context;
+    umd_log(UMD,
+            UMD_LLT_INFO,
+            "plg_mqtt: [connection (%s) established]",
+            conn->name);
+
     // get topics
     char **t = NULL;
     while ((t = (char **)utarray_next(conn->topics, t))) {
@@ -448,7 +453,7 @@ process_cfg(umplg_mngr_t *pm, struct mqtt_conn_mngr *mngr)
             // get array object (v declared in json_object_object_foreach macro)
             struct json_object *j_conn = json_object_array_get_idx(jobj, i);
             // check env object type
-            if (!json_object_is_type(v, json_type_object)) {
+            if (!json_object_is_type(j_conn, json_type_object)) {
                 umd_log(UMD, UMD_LLT_ERROR, "plg_mqtt: [invalid MQTT connection object]");
                 return 4;
             }
