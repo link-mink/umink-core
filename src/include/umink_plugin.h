@@ -38,8 +38,7 @@ typedef struct umplg_cmd_map umplg_cmd_map_t;
 /**
  * Plugin CMD ids
  */
-enum umplg_cmd_t
-{
+enum umplg_cmd_t {
     /** Unknown */
     UNKNWON_COMMAND = 0,
     /** Get system info */
@@ -162,12 +161,14 @@ typedef int (*umplg_shfn_init_t)(umplg_sh_t *shd);
  * @param[in]       d_in      Pointer to plugin standard input data
  * @param[in,out]   d_out     Output data buffer pointer
  * @param[in,out]   out_sz    Output data size pointer
+ * @param[in]       args      User data
  * @return          0 for success
  */
 typedef int (*umplg_shfn_run_t)(umplg_sh_t *shd,
                                 umplg_data_std_t *d_in,
                                 char **d_out,
-                                size_t *out_sz);
+                                size_t *out_sz,
+                                void *args);
 /**
  * Signal handler method (term)
  *
@@ -186,8 +187,7 @@ struct umplg_cmd_map {
 };
 
 /** Input data type for local interface */
-enum umplgd_t
-{
+enum umplgd_t {
     /** unknown data type (error) */
     UMPLG_DT_UNKNOWN = 0,
     /** JSON-RPC (UNIX socket) */
@@ -244,6 +244,8 @@ struct umplgd {
     umplg_termh_t termh;
     /** Custom data filled by plugin */
     void *data;
+    /** terminated flag */
+    bool terminated;
     // hashable
     UT_hash_handle hh;
 };
@@ -272,6 +274,8 @@ struct umplg_sh {
     UT_array *args;
     /** Running flag */
     bool running;
+    /** terminated flag */
+    bool terminated;
     /** Lock */
     pthread_mutex_t mtx;
     // hashable
@@ -305,6 +309,13 @@ umplg_mngr_t *umplg_new_mngr();
  * @param[in]   pm  Plugin manager
  */
 void umplg_free_mngr(umplg_mngr_t *pm);
+
+/**
+ * Terminate plugins
+ *
+ * @param[in]   pm  Plugin manager
+ */
+void umplg_terminate_all(umplg_mngr_t *pm);
 
 /**
  * Load and verify plugin
@@ -357,7 +368,7 @@ int umplg_reg_signal(umplg_mngr_t *pm, umplg_sh_t *sh);
  * @param[in]   s       Signal name
  * @param[in]   d_in    Signal input data
  * @param[out]  d_out   Signal output buffer
- * @param[out]  out_sz  Signal output data size
+ * @param[in]   args    User data
  *
  * @return      0 for success or error code
  */
@@ -365,7 +376,8 @@ int umplg_proc_signal(umplg_mngr_t *pm,
                       const char *s,
                       umplg_data_std_t *d_in,
                       char **d_out,
-                      size_t *out_sz);
+                      size_t *out_sz,
+                      void *args);
 
 /**
  * Add items to standard data descriptor

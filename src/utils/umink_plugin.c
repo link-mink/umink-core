@@ -58,7 +58,8 @@ umplg_load(umplg_mngr_t *pm, const char *fpath)
                     .cmdh = cmdh,
                     .cmdh_l = cmdh_l,
                     .termh = term,
-                    .data = NULL };
+                    .data = NULL,
+                    .terminated = false };
     // add to list
     utarray_push_back(pm->plgs, &pd);
     umplgd_t *pdp = utarray_back(pm->plgs);
@@ -143,7 +144,8 @@ umplg_proc_signal(umplg_mngr_t *pm,
                   const char *s,
                   umplg_data_std_t *d_in,
                   char **d_out,
-                  size_t *out_sz)
+                  size_t *out_sz,
+                  void *args)
 {
 
     // single handler descriptor
@@ -154,7 +156,7 @@ umplg_proc_signal(umplg_mngr_t *pm,
         return 1;
     }
     // run
-    return tmp_shd->run(tmp_shd, d_in, d_out, out_sz);
+    return tmp_shd->run(tmp_shd, d_in, d_out, out_sz, args);
 }
 
 static void
@@ -199,7 +201,7 @@ umplg_free_mngr(umplg_mngr_t *pm)
     HASH_ITER(hh, pm->signals, c_sh, tmp_sh)
     {
         HASH_DEL(pm->signals, c_sh);
-        if (c_sh->term != NULL) {
+        if (c_sh->term != NULL && !c_sh->terminated) {
             c_sh->term(c_sh);
         }
         free(c_sh->id);
@@ -230,7 +232,9 @@ umplg_free_mngr(umplg_mngr_t *pm)
          pd = (umplgd_t *)utarray_next(pm->plgs, pd)) {
 
         // terminate
-        pd->termh(pm, pd);
+        if (!pd->terminated) {
+            pd->termh(pm, pd);
+        }
         // free mem
         dlclose(pd->handle);
         free(pd->name);
@@ -241,6 +245,32 @@ umplg_free_mngr(umplg_mngr_t *pm)
     // free mngr
     free(pm);
 }
+
+void
+umplg_terminate_all(umplg_mngr_t *pm)
+{
+    // free signals
+    umplg_sh_t *c_sh = NULL;
+    umplg_sh_t *tmp_sh = NULL;
+
+    // loop signals
+    HASH_ITER(hh, pm->signals, c_sh, tmp_sh)
+    {
+        if (c_sh->term != NULL && !c_sh->terminated) {
+            c_sh->term(c_sh);
+            c_sh->terminated = true;
+        }
+    }
+
+    // loop plugins
+    for (umplgd_t *pd = (umplgd_t *)utarray_front(pm->plgs); pd != NULL;
+         pd = (umplgd_t *)utarray_next(pm->plgs, pd)) {
+        // terminate
+        pd->termh(pm, pd);
+        pd->terminated = true;
+    }
+}
+
 
 static void
 std_items_copy(void *_dst, const void *_src)

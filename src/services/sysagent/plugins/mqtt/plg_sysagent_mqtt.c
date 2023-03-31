@@ -130,7 +130,7 @@ mqtt_proc_thread(void *args)
             char *b = NULL;
             size_t b_sz = 0;
             // process signal
-            umplg_proc_signal(conn->pm, SIG_MQTT_RX, data, &b, &b_sz);
+            umplg_proc_signal(conn->pm, SIG_MQTT_RX, data, &b, &b_sz, NULL);
             // cleanup
             umplg_stdd_free(data);
             free(data);
