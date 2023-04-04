@@ -187,6 +187,7 @@ umplg_new_mngr()
     add_cmd_id_map_item(UNKNWON_COMMAND, "UNKNWON_COMMAND", pm);
     add_cmd_id_map_item(CMD_MQTT_PUBLISH, "CMD_MQTT_PUBLISH", pm);
     add_cmd_id_map_item(CMD_LUA_CALL, "CMD_LUA_CALL", pm);
+    add_cmd_id_map_item(CMD_MQTT_BINARY_UPLOAD, "CMD_MQTT_BINARY_UPLOAD", pm);
     // pm pointer
     return pm;
 }

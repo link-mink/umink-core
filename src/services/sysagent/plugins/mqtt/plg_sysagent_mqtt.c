@@ -23,6 +23,10 @@
 #include <MQTTAsync.h>
 #include <spscq.h>
 #include <semaphore.h>
+#include <uuid/uuid.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
 
 /*************/
 /* Plugin ID */
@@ -33,9 +37,13 @@ static const char *PLG_ID = "plg_sysagent_mqtt.so";
 /* list of command implemented by this plugin */
 /**********************************************/
 int COMMANDS[] = { CMD_MQTT_PUBLISH,
+                   CMD_MQTT_BINARY_UPLOAD,
                    // end of list marker
                    -1 };
 
+/*************/
+/* constants */
+/*************/
 static const char *SIG_MQTT_RX = "mqtt:RX";
 static const int SIG_SEM_TIMEOUT = 5;
 
@@ -73,13 +81,41 @@ struct mqtt_conn_mngr {
     pthread_mutex_t mtx;
 };
 
-// fwd declarations
+/**************************/
+/* binary file descriptor */
+/**************************/
+struct mqtt_file_d {
+    // uuid
+    char uuid[37];
+    // file path
+    char path[128];
+    // expected file size
+    size_t size;
+    // timestamp
+    time_t ts;
+    // hashable
+    UT_hash_handle hh;
+};
+
+
+/********************/
+/* fwd declarations */
+/********************/
 static int mqtt_conn_sub(struct mqtt_conn_d *conn, const char *t);
 static int mqtt_conn_connect(struct mqtt_conn_d *conn, struct json_object *j_conn);
 static void *mqtt_proc_thread(void *arg);
 
-// globals
+/*********/
+/* types */
+/*********/
+typedef struct mqtt_file_d mqtt_file_d_t;
+
+/***********/
+/* globals */
+/***********/
 struct mqtt_conn_mngr *mqtt_mngr = NULL;
+static mqtt_file_d_t *bin_uploads = NULL;
+static pthread_mutex_t bin_upl_mtx;
 
 struct mqtt_conn_d *
 mqtt_conn_new(umplg_mngr_t *pm)
@@ -140,9 +176,216 @@ mqtt_proc_thread(void *args)
     return NULL;
 }
 
+/********************************/
+/* add new binary file metadata */
+/********************************/
+static mqtt_file_d_t *
+mqtt_bin_upl_add(const char *path, size_t fsz)
+{
+    // sanity check
+    if (fsz == 0) {
+        return NULL;
+    }
+
+    mqtt_file_d_t *f = NULL;
+    pthread_mutex_lock(&bin_upl_mtx);
+    // gen uuid
+    uuid_t uuid;
+    uuid_generate(uuid);
+    char uuid_str[37];
+    uuid_unparse_lower(uuid, uuid_str);
+    // check for uuid
+    HASH_FIND_STR(bin_uploads, uuid_str, f);
+    if (f != NULL) {
+        pthread_mutex_unlock(&bin_upl_mtx);
+        return NULL;
+    }
+    // add new
+    f = malloc(sizeof(mqtt_file_d_t));
+    strcpy(f->path, path);
+    strcpy(f->uuid, uuid_str);
+    f->ts = time(NULL);
+    f->size = fsz;
+    HASH_ADD_STR(bin_uploads, uuid, f);
+
+    pthread_mutex_unlock(&bin_upl_mtx);
+    return f;
+}
+
+/*******************************/
+/* remove binary file metadata */
+/*******************************/
+static int
+mqtt_bin_upl_del(const char *uuid)
+{
+    mqtt_file_d_t *f = NULL;
+    pthread_mutex_lock(&bin_upl_mtx);
+
+    // check for uuid
+    HASH_FIND_STR(bin_uploads, uuid, f);
+    if (f == NULL) {
+        pthread_mutex_unlock(&bin_upl_mtx);
+        return 1;
+    }
+    // remove
+    HASH_DEL(bin_uploads, f);
+    free(f);
+
+    pthread_mutex_unlock(&bin_upl_mtx);
+    return 0;
+}
+
+/************************/
+/* handle binary topics */
+/************************/
+static int
+mqtt_handle_bin(char *tpc, MQTTAsync_message *msg)
+{
+    // temp copy of topic string
+    char tmp_t[strlen(tpc) + 1];
+    char *sp;
+    char *dev_uuid = NULL;
+    char *file_uuid = NULL;
+    char *file_op = NULL;
+    strcpy(tmp_t, tpc);
+    // tokenize
+    int tc = 0;
+    char *t = strtok_r(tmp_t, "/", &sp);
+    while (t != NULL) {
+        ++tc;
+        switch (tc) {
+        // device uuid
+        case 2:
+            dev_uuid = t;
+            break;
+
+            // file uuid
+        case 3:
+            file_uuid = t;
+            break;
+
+            // file op
+        case 4:
+            file_op = t;
+            break;
+
+        default:
+            break;
+        }
+        t = strtok_r(NULL, "/", &sp);
+    }
+
+    // sanity check
+    if (dev_uuid == NULL || file_uuid == NULL || file_op == NULL) {
+        umd_log(UMD,
+                UMD_LLT_ERROR,
+                "plg_mqtt: [invalid topic for binary file upload]");
+        return 1;
+    }
+
+    mqtt_file_d_t *f = NULL;
+    HASH_FIND_STR(bin_uploads, file_uuid, f);
+    if (f == NULL) {
+        umd_log(UMD,
+                UMD_LLT_ERROR,
+                "plg_mqtt: [missing metadata for binary file upload]");
+        return 2;
+    }
+
+    // file op
+    if (strcmp(file_op, "upload") == 0) {
+        // create file path str
+        char fp[strlen(f->path) + strlen(f->uuid) + 2];
+        fp[0] = '\0';
+        strcat(fp, f->path);
+        strcat(fp, "/");
+        strcat(fp, f->uuid);
+        // open for writing
+        int fh = open(fp, O_WRONLY | O_CREAT | O_APPEND | O_SYNC, 0644);
+        if (fh < 0) {
+            umd_log(UMD,
+                    UMD_LLT_ERROR,
+                    "plg_mqtt: [cannot initate binary file uipload: (%s)]",
+                    strerror(errno));
+            return 3;
+        }
+        // file size check
+        size_t fsz = lseek(fh, 0, SEEK_END);
+        if(fsz >= f->size){
+            umd_log(UMD,
+                    UMD_LLT_ERROR,
+                    "plg_mqtt: [maximum filesize (%lu) reached for file (%s)]",
+                    fsz,
+                    fp);
+            return 4;
+        }
+
+        // write in chunks
+        size_t sz = msg->payloadlen;
+        uint8_t *pld = msg->payload;
+        size_t chunk = sz < 2097152 ? sz : 2097152;
+        while (sz > 0) {
+            // write chunk
+            write(fh, pld, chunk);
+            // dec size
+            sz -= chunk;
+            // fwd payload buffer
+            pld += chunk;
+            // set chunk size
+            if (sz < chunk) {
+                chunk = sz;
+            }
+            // flush
+            fsync(fh);
+        }
+        // update ts
+        f->ts = time(NULL);
+        // get current file size
+        fsz = lseek(fh, 0, SEEK_END);
+        // close file descriptor
+        close(fh);
+        // remove metadata descriptor if finished
+        if (f->size == fsz) {
+            mqtt_bin_upl_del(f->uuid);
+        }
+    }
+    // ok
+    return 0;
+}
+
 static int
 mqtt_on_rx(void *ctx, char *t, int t_sz, MQTTAsync_message *msg)
 {
+    // mink.bin/<device_uuid>/<session_or_file_uuid>/upload
+    if (strncmp(t, "mink.bin/", 9) == 0) {
+        if (mqtt_handle_bin(t, msg) != 0) {
+            umd_log(UMD,
+                    UMD_LLT_ERROR,
+                    "plg_mqtt: [error while starting binary file upload (%s)",
+                    t);
+        }
+
+        // free expired binary uploads
+        time_t now = time(NULL);
+        pthread_mutex_lock(&bin_upl_mtx);
+        mqtt_file_d_t *f;
+        mqtt_file_d_t *f_tmp;
+        HASH_ITER(hh, bin_uploads, f, f_tmp)
+        {
+            if (now - f->ts > SIG_SEM_TIMEOUT) {
+                printf("FREEING: [%s]\n", f->uuid);
+                HASH_DEL(bin_uploads, f);
+                free(f);
+            }
+        }
+        pthread_mutex_unlock(&bin_upl_mtx);
+
+        // cleanup
+        MQTTAsync_freeMessage(&msg);
+        MQTTAsync_free(t);
+        return 1;
+    }
+
     // context
     struct mqtt_conn_d *conn = ctx;
     // msg data
@@ -154,10 +397,13 @@ mqtt_on_rx(void *ctx, char *t, int t_sz, MQTTAsync_message *msg)
     umplg_data_std_items_t items = { .table = NULL };
     umplg_data_std_item_t item_topic = { .name = "mqtt_topic", .value = t };
     umplg_data_std_item_t item_pld = { .name = "mqtt_payload", .value = s };
+    umplg_data_std_item_t item_conn = { .name = "mqtt_connection",
+                                        .value = conn->name };
     // create signal input data
     umplg_stdd_init(e_d);
     umplg_stdd_item_add(&items, &item_topic);
     umplg_stdd_item_add(&items, &item_pld);
+    umplg_stdd_item_add(&items, &item_conn);
     umplg_stdd_items_add(e_d, &items);
 
     // push to sig proc thread
@@ -531,6 +777,8 @@ init(umplg_mngr_t *pm, umplgd_t *pd)
     if (process_cfg(pm, mqtt_mngr)) {
         umd_log(UMD, UMD_LLT_ERROR, "plg_mqtt: [cannot process plugin configuration]");
     }
+    // binary file upload lock
+    pthread_mutex_init(&bin_upl_mtx, NULL);
     return 0;
 }
 
@@ -541,6 +789,7 @@ int
 terminate(umplg_mngr_t *pm, umplgd_t *pd)
 {
     mqtt_mngr_free(mqtt_mngr);
+    pthread_mutex_destroy(&bin_upl_mtx);
     return 0;
 }
 
@@ -592,6 +841,39 @@ impl_mqtt_publish(umplg_data_std_t *data)
                   retain);
 }
 
+/********************************/
+/* local CMD_MQTT_BINARY_UPLOAD */
+/********************************/
+static void
+impl_mqtt_bin_upload(umplg_data_std_t *data)
+{
+    // sanity check
+    if (data == NULL || utarray_len(data->items) < 1) {
+        umd_log(UMD, UMD_LLT_ERROR, "plg_mqtt: [CMD_MQTT_BINARY_UPLOAD invalid data]");
+        return;
+    }
+    // get filesize
+    umplg_data_std_items_t *fsz = utarray_eltptr(data->items, 0);
+    // sanity chhecks
+    if (HASH_COUNT(fsz->table) < 1) {
+        return;
+    }
+
+    // add new file
+    mqtt_file_d_t *fd = mqtt_bin_upl_add("/tmp", atoi(fsz->table->value));
+    if (fd == NULL) {
+        return;
+    }
+    // return file uuid
+    umplg_data_std_items_t items = { .table = NULL };
+    umplg_data_std_item_t item_uuid = { .name = "file_uuid",
+                                        .value = fd->uuid };
+    umplg_stdd_item_add(&items, &item_uuid);
+    umplg_stdd_items_add(data, &items);
+    // cleanup
+    HASH_CLEAR(hh, items.table);
+}
+
 /*************************/
 /* local command handler */
 /*************************/
@@ -611,6 +893,9 @@ run_local(umplg_mngr_t *pm, umplgd_t *pd, int cmd_id, umplg_idata_t *data)
         switch (cmd_id) {
         case CMD_MQTT_PUBLISH:
             impl_mqtt_publish(plg_d);
+            break;
+        case CMD_MQTT_BINARY_UPLOAD:
+            impl_mqtt_bin_upload(plg_d);
             break;
 
         default:

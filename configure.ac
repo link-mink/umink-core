@@ -124,6 +124,10 @@ AC_CHECK_LIB([rt], [clock_gettime], , AC_MSG_ERROR([clock_gettime not found!]))
 # /******/
 AC_CHECK_LIB([m], [pow], , AC_MSG_ERROR([libm not found!]))
 
+# /********/
+# /* uuid */
+# /********/
+AC_CHECK_LIB([uuid], [uuid_generate], , AC_MSG_ERROR([libuuid not found!]))
 
 # /***********/
 # /* pthread */

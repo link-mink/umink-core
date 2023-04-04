@@ -112,7 +112,9 @@ enum umplg_cmd_t {
     /** Publish via MQTT */
     CMD_MQTT_PUBLISH = 35,
     /** Ivoke Lua call */
-    CMD_LUA_CALL = 36
+    CMD_LUA_CALL = 36,
+    /** Setup MQTT binary file upload */
+    CMD_MQTT_BINARY_UPLOAD = 37
 };
 
 /**
