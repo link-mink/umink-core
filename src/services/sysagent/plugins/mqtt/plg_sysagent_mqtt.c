@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/stat.h>
 
 /*************/
 /* Plugin ID */
@@ -65,6 +66,8 @@ struct mqtt_conn_d {
     spsc_qd_t *sig_q;
     // signal queue size
     int sig_qsz;
+    // binary upload path
+    char *bin_upl_path;
     // signal thread semaphore
     sem_t sig_sem;
     // hashable
@@ -120,9 +123,8 @@ static pthread_mutex_t bin_upl_mtx;
 struct mqtt_conn_d *
 mqtt_conn_new(umplg_mngr_t *pm)
 {
-    struct mqtt_conn_d *c = malloc(sizeof(struct mqtt_conn_d));
+    struct mqtt_conn_d *c = calloc(1, sizeof(struct mqtt_conn_d));
     c->pm = pm;
-    c->client = NULL;
     utarray_new(c->topics, &ut_str_icd);
     return c;
 }
@@ -235,6 +237,17 @@ mqtt_bin_upl_del(const char *uuid)
     return 0;
 }
 
+// create temp file name string
+static void
+gen_temp_fname(mqtt_file_d_t *f, char *b)
+{
+    b[0] = '\0';
+    strcat(b, f->path);
+    strcat(b, "/");
+    strcat(b, f->uuid);
+    strcat(b, ".tmp");
+}
+
 /************************/
 /* handle binary topics */
 /************************/
@@ -295,11 +308,8 @@ mqtt_handle_bin(char *tpc, MQTTAsync_message *msg)
     // file op
     if (strcmp(file_op, "upload") == 0) {
         // create file path str
-        char fp[strlen(f->path) + strlen(f->uuid) + 2];
-        fp[0] = '\0';
-        strcat(fp, f->path);
-        strcat(fp, "/");
-        strcat(fp, f->uuid);
+        char fp[strlen(f->path) + strlen(f->uuid) + 6];
+        gen_temp_fname(f, fp);
         // open for writing
         int fh = open(fp, O_WRONLY | O_CREAT | O_APPEND | O_SYNC, 0644);
         if (fh < 0) {
@@ -325,6 +335,18 @@ mqtt_handle_bin(char *tpc, MQTTAsync_message *msg)
         uint8_t *pld = msg->payload;
         size_t chunk = sz < 2097152 ? sz : 2097152;
         while (sz > 0) {
+            // overflow check
+            fsz += chunk;
+            if (fsz > f->size) {
+                umd_log(UMD,
+                        UMD_LLT_ERROR,
+                        "plg_mqtt: [attempting to overflow (%s) file with "
+                        "(%lu) extra bytes]",
+                        fp,
+                        fsz - f->size);
+
+                break;
+            }
             // write chunk
             write(fh, pld, chunk);
             // dec size
@@ -347,10 +369,42 @@ mqtt_handle_bin(char *tpc, MQTTAsync_message *msg)
         // remove metadata descriptor if finished
         if (f->size == fsz) {
             mqtt_bin_upl_del(f->uuid);
+            // rename ".tmp" extension
+            size_t sl = strlen(fp) - 4;
+            char fp2[sl];
+            memcpy(fp2, fp, sl);
+            fp2[sl] = '\0';
+            rename(fp, fp2);
         }
     }
     // ok
     return 0;
+}
+
+// clean stale uploads
+static void
+mqtt_bin_cleanup()
+{
+    // free expired binary uploads
+    time_t now = time(NULL);
+    pthread_mutex_lock(&bin_upl_mtx);
+    mqtt_file_d_t *f;
+    mqtt_file_d_t *f_tmp;
+    HASH_ITER(hh, bin_uploads, f, f_tmp)
+    {
+        if (now - f->ts > SIG_SEM_TIMEOUT) {
+            printf("FREEING: [%s]\n", f->uuid);
+            HASH_DEL(bin_uploads, f);
+            // create file path str
+            char fp[strlen(f->path) + strlen(f->uuid) + 6];
+            gen_temp_fname(f, fp);
+            // remove file
+            unlink(fp);
+            free(f);
+        }
+    }
+    pthread_mutex_unlock(&bin_upl_mtx);
+
 }
 
 static int
@@ -366,19 +420,7 @@ mqtt_on_rx(void *ctx, char *t, int t_sz, MQTTAsync_message *msg)
         }
 
         // free expired binary uploads
-        time_t now = time(NULL);
-        pthread_mutex_lock(&bin_upl_mtx);
-        mqtt_file_d_t *f;
-        mqtt_file_d_t *f_tmp;
-        HASH_ITER(hh, bin_uploads, f, f_tmp)
-        {
-            if (now - f->ts > SIG_SEM_TIMEOUT) {
-                printf("FREEING: [%s]\n", f->uuid);
-                HASH_DEL(bin_uploads, f);
-                free(f);
-            }
-        }
-        pthread_mutex_unlock(&bin_upl_mtx);
+        mqtt_bin_cleanup();
 
         // cleanup
         MQTTAsync_freeMessage(&msg);
@@ -569,6 +611,8 @@ mqtt_mngr_add_conn(struct mqtt_conn_mngr *m, umplg_mngr_t *pm, struct json_objec
     struct json_object *j_name = json_object_object_get(j_conn, "name");
     // proc thread queue size
     struct json_object *j_pth_qsz = json_object_object_get(j_conn, "proc_thread_qsize");
+    // binary upload path
+    struct json_object *j_bin_path = json_object_object_get(j_conn, "bin_upload_path");
     // sanity check
     if (j_addr == NULL || j_name == NULL) {
         return NULL;
@@ -589,6 +633,20 @@ mqtt_mngr_add_conn(struct mqtt_conn_mngr *m, umplg_mngr_t *pm, struct json_objec
     }
     c->sig_q = spscq_new(c->sig_qsz);
     sem_init(&c->sig_sem, 0, 0);
+    // binary upload path
+    if(j_bin_path != NULL){
+        if (mkdir(json_object_get_string(j_bin_path),
+                  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 &&
+            errno != EEXIST) {
+            umd_log(UMD,
+                    UMD_LLT_ERROR,
+                    "plg_mqtt: [cannot create binary upload directory]");
+            c->bin_upl_path = strdup("/tmp");
+
+        }else{
+            c->bin_upl_path = strdup(json_object_get_string(j_bin_path));
+        }
+    }
     pthread_create(&c->sig_th, NULL, &mqtt_proc_thread, c);
     // lock
     pthread_mutex_lock(&m->mtx);
@@ -632,6 +690,7 @@ mqtt_mngr_del_conn(struct mqtt_conn_mngr *m, const char *name, bool th_safe)
         MQTTAsync_destroy(&tmp_conn->client);
         free(tmp_conn->name);
         utarray_free(tmp_conn->topics);
+        free(tmp_conn->bin_upl_path);
         free(tmp_conn);
     }
     // unlock
@@ -710,6 +769,7 @@ process_cfg(umplg_mngr_t *pm, struct mqtt_conn_mngr *mngr)
             struct json_object *j_usr = json_object_object_get(j_conn, "username");
             struct json_object *j_pwd = json_object_object_get(j_conn, "password");
             struct json_object *j_pth_qsz = json_object_object_get(j_conn, "proc_thread_qsize");
+            struct json_object *j_bin_path = json_object_object_get(j_conn, "bin_upload_path");
             // all values are mandatory
             if (!(j_n && j_addr && j_clid && j_usr && j_pwd)) {
                 umd_log(UMD,
@@ -735,6 +795,15 @@ process_cfg(umplg_mngr_t *pm, struct mqtt_conn_mngr *mngr)
                     umd_log(UMD,
                             UMD_LLT_ERROR,
                             "plg_mqtt: [wrong type for 'proc_thread_qsize']");
+                    return 6;
+                }
+            }
+            // binary upload path
+            if (j_bin_path != NULL) {
+                if (!json_object_is_type(j_bin_path, json_type_string)) {
+                    umd_log(UMD,
+                            UMD_LLT_ERROR,
+                            "plg_mqtt: [wrong type for 'bin_upload_path']");
                     return 6;
                 }
             }
@@ -789,6 +858,7 @@ int
 terminate(umplg_mngr_t *pm, umplgd_t *pd)
 {
     mqtt_mngr_free(mqtt_mngr);
+    mqtt_bin_cleanup();
     pthread_mutex_destroy(&bin_upl_mtx);
     return 0;
 }
@@ -848,19 +918,25 @@ static void
 impl_mqtt_bin_upload(umplg_data_std_t *data)
 {
     // sanity check
-    if (data == NULL || utarray_len(data->items) < 1) {
+    if (data == NULL || utarray_len(data->items) < 2) {
         umd_log(UMD, UMD_LLT_ERROR, "plg_mqtt: [CMD_MQTT_BINARY_UPLOAD invalid data]");
         return;
     }
+    // get connection
+    umplg_data_std_items_t *cname = utarray_eltptr(data->items, 0);
     // get filesize
-    umplg_data_std_items_t *fsz = utarray_eltptr(data->items, 0);
+    umplg_data_std_items_t *fsz = utarray_eltptr(data->items, 1);
     // sanity chhecks
-    if (HASH_COUNT(fsz->table) < 1) {
+    if (HASH_COUNT(fsz->table) < 1 || HASH_COUNT(cname->table) < 1) {
         return;
     }
-
+    // connection
+     struct mqtt_conn_d *c = mqtt_mngr_get_conn(mqtt_mngr, cname->table->value);
+    if (c == NULL) {
+        return;
+    }
     // add new file
-    mqtt_file_d_t *fd = mqtt_bin_upl_add("/tmp", atoi(fsz->table->value));
+    mqtt_file_d_t *fd = mqtt_bin_upl_add(c->bin_upl_path, atoi(fsz->table->value));
     if (fd == NULL) {
         return;
     }
