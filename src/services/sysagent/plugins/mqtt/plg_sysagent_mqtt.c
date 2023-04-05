@@ -393,7 +393,6 @@ mqtt_bin_cleanup()
     HASH_ITER(hh, bin_uploads, f, f_tmp)
     {
         if (now - f->ts > SIG_SEM_TIMEOUT) {
-            printf("FREEING: [%s]\n", f->uuid);
             HASH_DEL(bin_uploads, f);
             // create file path str
             char fp[strlen(f->path) + strlen(f->uuid) + 6];
@@ -641,11 +640,14 @@ mqtt_mngr_add_conn(struct mqtt_conn_mngr *m, umplg_mngr_t *pm, struct json_objec
             umd_log(UMD,
                     UMD_LLT_ERROR,
                     "plg_mqtt: [cannot create binary upload directory]");
-            c->bin_upl_path = strdup("/tmp");
 
         }else{
             c->bin_upl_path = strdup(json_object_get_string(j_bin_path));
         }
+    }
+    // set default path
+    if (c->bin_upl_path == NULL) {
+        c->bin_upl_path = strdup("/tmp");
     }
     pthread_create(&c->sig_th, NULL, &mqtt_proc_thread, c);
     // lock
