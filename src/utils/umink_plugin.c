@@ -203,7 +203,8 @@ umplg_free_mngr(umplg_mngr_t *pm)
     {
         HASH_DEL(pm->signals, c_sh);
         if (c_sh->term != NULL && !c_sh->terminated) {
-            c_sh->term(c_sh);
+            c_sh->term(c_sh, 0);
+            c_sh->term(c_sh, 1);
         }
         free(c_sh->id);
         utarray_free(c_sh->args);
@@ -234,7 +235,8 @@ umplg_free_mngr(umplg_mngr_t *pm)
 
         // terminate
         if (!pd->terminated) {
-            pd->termh(pm, pd);
+            pd->termh(pm, pd, 0);
+            pd->termh(pm, pd, 1);
         }
         // free mem
         dlclose(pd->handle);
@@ -248,7 +250,7 @@ umplg_free_mngr(umplg_mngr_t *pm)
 }
 
 void
-umplg_terminate_all(umplg_mngr_t *pm)
+umplg_terminate_all(umplg_mngr_t *pm, int phase)
 {
     // free signals
     umplg_sh_t *c_sh = NULL;
@@ -257,8 +259,8 @@ umplg_terminate_all(umplg_mngr_t *pm)
     // loop signals
     HASH_ITER(hh, pm->signals, c_sh, tmp_sh)
     {
-        if (c_sh->term != NULL && !c_sh->terminated) {
-            c_sh->term(c_sh);
+        if (c_sh->term != NULL) {
+            c_sh->term(c_sh, phase);
             c_sh->terminated = true;
         }
     }
@@ -267,7 +269,7 @@ umplg_terminate_all(umplg_mngr_t *pm)
     for (umplgd_t *pd = (umplgd_t *)utarray_front(pm->plgs); pd != NULL;
          pd = (umplgd_t *)utarray_next(pm->plgs, pd)) {
         // terminate
-        pd->termh(pm, pd);
+        pd->termh(pm, pd, phase);
         pd->terminated = true;
     }
 }

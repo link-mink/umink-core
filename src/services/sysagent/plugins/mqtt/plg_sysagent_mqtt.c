@@ -707,12 +707,6 @@ mqtt_term(struct mqtt_conn_d *conn)
     mqtt_mngr_del_conn(mqtt_mngr, conn->name, false);
 }
 
-static void
-mqtt_mngr_free(struct mqtt_conn_mngr *m){
-    mqtt_mngr_process_conns(mqtt_mngr, &mqtt_term);
-    free(m);
-}
-
 static struct mqtt_conn_d *
 mqtt_mngr_get_conn(struct mqtt_conn_mngr *m, const char *name)
 {
@@ -856,12 +850,33 @@ init(umplg_mngr_t *pm, umplgd_t *pd)
 /*********************/
 /* terminate handler */
 /*********************/
-int
-terminate(umplg_mngr_t *pm, umplgd_t *pd)
+static void
+term_phase_0(umplg_mngr_t *pm, umplgd_t *pd)
 {
-    mqtt_mngr_free(mqtt_mngr);
+    mqtt_mngr_process_conns(mqtt_mngr, &mqtt_term);
+}
+
+static void
+term_phase_1(umplg_mngr_t *pm, umplgd_t *pd)
+{
+    free(mqtt_mngr);
     mqtt_bin_cleanup();
     pthread_mutex_destroy(&bin_upl_mtx);
+}
+
+int
+terminate(umplg_mngr_t *pm, umplgd_t *pd, int phase)
+{
+    switch (phase) {
+    case 0:
+        term_phase_0(pm, pd);
+        break;
+    case 1:
+        term_phase_1(pm, pd);
+        break;
+    default:
+        break;
+    }
     return 0;
 }
 

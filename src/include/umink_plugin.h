@@ -131,9 +131,10 @@ typedef int (*umplg_inith_t)(umplg_mngr_t *pm, umplgd_t *pd);
  *
  * @param[in]   pm      Pointer to MINK plugin manager
  * @param[in]   pd      Pointer to plugin descriptor
+ * @param[in]   phase   Termination phase
  * @return      0 for success
  */
-typedef int (*umplg_termh_t)(umplg_mngr_t *pm, umplgd_t *pd);
+typedef int (*umplg_termh_t)(umplg_mngr_t *pm, umplgd_t *pd, int phase);
 
 /**
  * Plugin cmd handler
@@ -174,10 +175,11 @@ typedef int (*umplg_shfn_run_t)(umplg_sh_t *shd,
 /**
  * Signal handler method (term)
  *
- * @param[in]   shd       Pointer to signal handler descriptor
+ * @param[in]   shd         Pointer to signal handler descriptor
+ * @param[in]   phase       Termination phase
  * @return      0 for success
  */
-typedef int (*umplg_shfn_term_t)(umplg_sh_t *shd);
+typedef int (*umplg_shfn_term_t)(umplg_sh_t *shd, int phase);
 
 /** String/CMD mapping */
 struct umplg_cmd_map {
@@ -315,9 +317,10 @@ void umplg_free_mngr(umplg_mngr_t *pm);
 /**
  * Terminate plugins
  *
- * @param[in]   pm  Plugin manager
+ * @param[in]   pm      Plugin manager
+ * @param[in]   phase   Termination phase
  */
-void umplg_terminate_all(umplg_mngr_t *pm);
+void umplg_terminate_all(umplg_mngr_t *pm, int phase);
 
 /**
  * Load and verify plugin

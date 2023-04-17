@@ -257,7 +257,8 @@ main(int argc, char **argv)
     // loop until terminated
     umd_loop(umd);
     // cleanup
-    umplg_terminate_all(dd.pm);
+    umplg_terminate_all(dd.pm, 0);
+    umplg_terminate_all(dd.pm, 1);
     json_object_put(dd.cfg);
     umc_free_ctx(umd->perf);
     umplg_free_mngr(dd.pm);
