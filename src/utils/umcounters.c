@@ -210,6 +210,9 @@ umc_match(umc_ctx_t *ctx, const char *ptrn, bool lock, umc_cb_t cb, void *arg)
     HASH_ITER(hh, ctx->counters, c, tmp)
     {
         // match counter
+#if !defined(FNM_EXTMATCH)
+#define FNM_EXTMATCH 0
+#endif
         if (fnmatch(ptrn, c->id, FNM_CASEFOLD | FNM_EXTMATCH) == 0) {
             cb(c, arg);
         }
