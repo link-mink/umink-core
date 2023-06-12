@@ -114,4 +114,3 @@ endif
 if ENABLE_MOSQUITTO_AUTH
 include src/services/sysagent/plugins/mosquitto_auth/Makefile.am
 endif
-

@@ -204,6 +204,15 @@ typedef int (*umplg_shfn_run_t)(umplg_sh_t *shd,
  */
 typedef int (*umplg_shfn_term_t)(umplg_sh_t *shd, int phase);
 
+/**
+ * Signal handler match callback
+ *
+ * @param[in]   shd         Pointer to signal handler descriptor
+ * @param[in]   args        User data
+ *
+ */
+typedef void (*umplg_shfn_match_t)(umplg_sh_t *shd, void *args);
+
 /** String/CMD mapping */
 struct umplg_cmd_map {
     /** CMD id */
@@ -411,6 +420,11 @@ int umplg_proc_signal(umplg_mngr_t *pm,
                       size_t *out_sz,
                       int usr_flags,
                       void *args);
+
+void umplg_match_signal(umplg_mngr_t *pm,
+                        const char *ptrn,
+                        umplg_shfn_match_t cb,
+                        void *args);
 
 /**
  * Add items to standard data descriptor

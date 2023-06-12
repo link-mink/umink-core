@@ -13,6 +13,7 @@
 #include <umdaemon.h>
 #include <dlfcn.h>
 #include <stdio.h>
+#include <fnmatch.h>
 
 umplgd_t *
 umplg_load(umplg_mngr_t *pm, const char *fpath)
@@ -34,8 +35,8 @@ umplg_load(umplg_mngr_t *pm, const char *fpath)
 
     // first 4 must exist
     if (!(reg_hooks && init && term && cmdh)) {
-        dlclose(h);
         umd_log(UMD, UMD_LLT_ERROR, "umplg_load: %s", dlerror());
+        dlclose(h);
         return NULL;
     }
     // check if all requested hooks are free
@@ -163,6 +164,22 @@ umplg_proc_signal(umplg_mngr_t *pm,
 
     // run
     return tmp_shd->run(tmp_shd, d_in, d_out, out_sz, args);
+}
+
+void
+umplg_match_signal(umplg_mngr_t *pm,
+                   const char *ptrn,
+                   umplg_shfn_match_t cb,
+                   void *args)
+{
+    umplg_sh_t *c_sh = NULL;
+    umplg_sh_t *tmp_sh = NULL;
+    HASH_ITER(hh, pm->signals, c_sh, tmp_sh)
+    {
+        if (fnmatch(ptrn, c_sh->id, 0) == 0) {
+            cb(c_sh, args);
+        }
+    }
 }
 
 static void
