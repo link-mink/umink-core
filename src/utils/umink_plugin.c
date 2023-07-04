@@ -145,6 +145,7 @@ umplg_proc_signal(umplg_mngr_t *pm,
                   umplg_data_std_t *d_in,
                   char **d_out,
                   size_t *out_sz,
+                  int usr_flags,
                   void *args)
 {
 
@@ -155,6 +156,11 @@ umplg_proc_signal(umplg_mngr_t *pm,
     if (tmp_shd == NULL) {
         return 1;
     }
+    // check min auth level
+    if (usr_flags < tmp_shd->min_auth_lvl){
+        return 2;
+    }
+
     // run
     return tmp_shd->run(tmp_shd, d_in, d_out, out_sz, args);
 }

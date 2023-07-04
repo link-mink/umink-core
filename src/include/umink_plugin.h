@@ -118,6 +118,29 @@ enum umplg_cmd_t {
 };
 
 /**
+ * mink plugin/signal result codes
+ */
+enum umplg_ret_t {
+    /** success */
+    UMPLG_RES_SUCCESS = 0,
+    /** signal not found */
+    UMPLG_RES_UNKNOWN_SIGNAL = 1,
+    /** insufficient privileges */
+    UMPLG_RES_AUTH_ERROR = 2,
+    /** signal init error */
+    UMPLG_RES_SIG_INIT_FAILED = 3,
+    /** signal setup error */
+    UMPLG_RES_SIG_SETUP_FAILED = 4,
+    /** signal execution error */
+    UMPLG_RES_SIG_EXEC_FAILED = 5,
+    /** buffer overflow */
+    UMPLG_RES_BUFFER_OVERFLOW = 6,
+    /** invalid type */
+    UMPLG_RES_INVALID_TYPE = 7
+
+};
+
+/**
  * Plugin init handler
  *
  * @param[in]   pm      Pointer to MINK plugin manager
@@ -278,6 +301,8 @@ struct umplg_sh {
     UT_array *args;
     /** Running flag */
     bool running;
+    /** minimum user auth level */
+    uint16_t min_auth_lvl;
     /** terminated flag */
     bool terminated;
     /** Lock */
@@ -369,11 +394,13 @@ int umplg_reg_signal(umplg_mngr_t *pm, umplg_sh_t *sh);
 /**
  * Process signal
  *
- * @param[in]   pm      Plugin manager
- * @param[in]   s       Signal name
- * @param[in]   d_in    Signal input data
- * @param[out]  d_out   Signal output buffer
- * @param[in]   args    User data
+ * @param[in]   pm          Plugin manager
+ * @param[in]   s           Signal name
+ * @param[in]   d_in        Signal input data
+ * @param[out]  d_out       Signal output buffer
+ * @param[out]  out_sz      Size of data in output buffer
+ * @param[in]   usr_flags   Signal output buffer
+ * @param[in]   args        User data
  *
  * @return      0 for success or error code
  */
@@ -382,6 +409,7 @@ int umplg_proc_signal(umplg_mngr_t *pm,
                       umplg_data_std_t *d_in,
                       char **d_out,
                       size_t *out_sz,
+                      int usr_flags,
                       void *args);
 
 /**
