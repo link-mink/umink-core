@@ -511,12 +511,20 @@ mqtt_conn_connect(struct mqtt_conn_d *conn, struct json_object *j_conn)
                               MQTTCLIENT_PERSISTENCE_NONE,
                               NULL);
     if (rc != MQTTASYNC_SUCCESS) {
+        umd_log(UMD,
+                UMD_LLT_ERROR,
+                "plg_mqtt: [(%s) cannot create MQTT connection handle",
+                conn->name);
         return 1;
     }
 
     // set callbacks (RX)
     if (MQTTAsync_setCallbacks(conn->client, conn, NULL, mqtt_on_rx, NULL) !=
         MQTTASYNC_SUCCESS) {
+        umd_log(UMD,
+                UMD_LLT_ERROR,
+                "plg_mqtt: [(%s) cannot set MQTT connection callbacks",
+                conn->name);
         return 2;
     }
     // connection options
@@ -530,12 +538,20 @@ mqtt_conn_connect(struct mqtt_conn_d *conn, struct json_object *j_conn)
     conn_opts.password = json_object_get_string(j_pwd);
     conn_opts.ssl = &ssl_opts;
 
-    // connect
-    if (MQTTAsync_connect(conn->client, &conn_opts) != MQTTASYNC_SUCCESS) {
-        return 3;
-    }
     // set callbacks
     MQTTAsync_setConnected(conn->client, conn, mqtt_on_connect);
+
+    // connect
+    rc = MQTTAsync_connect(conn->client, &conn_opts);
+    if (rc != MQTTASYNC_SUCCESS) {
+        umd_log(UMD,
+                UMD_LLT_ERROR,
+                "plg_mqtt: [(%s) cannot establish MQTT connection, "
+                "error code = [%d]",
+                conn->name,
+                rc);
+        return 3;
+    }
 
     // success
     return 0;
