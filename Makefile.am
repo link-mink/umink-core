@@ -38,7 +38,8 @@ dist-hook:
 noinst_LTLIBRARIES = libumd.la \
                      libumplg.la \
                      libumdb.la \
-		     libumcounters.la
+                     libumcounters.la \
+                     libumlua.la
 if ENABLE_COAP
 noinst_LTLIBRARIES += libumrpc.la
 endif
@@ -55,6 +56,18 @@ libumplg_la_CFLAGS = ${COMMON_INCLUDES}
 libumdb_la_SOURCES = src/utils/umdb.c
 libumdb_la_CFLAGS = ${COMMON_INCLUDES}
 libumdb_la_LIBADD = ${SQLITE_LIBS}
+
+# umink lua core
+libumlua_la_SOURCES = src/services/sysagent/umlua.c \
+                      src/services/sysagent/umlua_m.c
+libumlua_la_CFLAGS = ${COMMON_INCLUDES} \
+                     ${JSON_C_CFLAGS} \
+                     -DLUA_COMPAT_ALL \
+                     -DLUA_COMPAT_5_1 \
+                     -DLUA_COMPAT_5_2 \
+                     -DLUA_COMPAT_5_3 \
+                     ${LUA_CFLAGS}
+libumlua_la_LIBADD = libumdb.la
 
 # umink counters
 libumcounters_la_SOURCES = src/utils/umcounters.c
@@ -82,12 +95,19 @@ sysagentd_SOURCES = src/services/sysagent/sysagentd.c \
                     src/include/uthash.h
 sysagentd_CFLAGS = ${COMMON_INCLUDES} \
                    ${JSON_C_CFLAGS} \
+                   -DLUA_COMPAT_ALL \
+                   -DLUA_COMPAT_5_1 \
+                   -DLUA_COMPAT_5_2 \
+                   -DLUA_COMPAT_5_3 \
+                   ${LUA_CFLAGS} \
                    -Isrc/services/sysagent
 sysagentd_LDFLAGS = -export-dynamic
 sysagentd_LDADD = libumd.la \
                   libumplg.la \
-		  libumcounters.la \
+                  libumcounters.la \
+                  libumlua.la \
                   ${JSON_C_LIBS} \
+                  ${LUA_LIBS} \
                   -ldl
 if ENABLE_COAP
 sysagentd_LDADD += libumrpc.la
@@ -99,11 +119,6 @@ distclean-local: distclean-ax-prefix-umink-pkg-config-h
 distclean-ax-prefix-umink-pkg-config-h:
 	rm -f umink_pkg_config.h
 
-
-if ENABLE_LUA
-# sysagent lua plugin
-include src/services/sysagent/plugins/lua/Makefile.am
-endif
 
 if ENABLE_MQTT
 # sysagent mqtt plugin

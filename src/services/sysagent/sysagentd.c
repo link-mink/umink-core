@@ -30,6 +30,10 @@ const char *UMD_DESCRIPTION = "umINK System Agent";
 // filter for scandir
 typedef int (*fs_dir_filter_t)(const struct dirent *);
 
+// fwd declarations
+void umlua_shutdown();
+int umlua_init(umplg_mngr_t *pm);
+
 // sysagent daemon instance descriptor type
 typedef struct {
     void *pcfg;
@@ -197,7 +201,7 @@ init_plugins(umplg_mngr_t *pm, const char *pdir)
 }
 
 static void
-init(sysagentdd_t *dd)
+load_cfg(sysagentdd_t *dd)
 {
     // load plugins configuration
     FILE *f = fopen(dd->plg_cfg_f, "r");
@@ -227,9 +231,6 @@ init(sysagentdd_t *dd)
     // set plugin manager cfg pointer
     dd->pm->cfg = dd->cfg;
     free(b);
-
-    // init plugins
-    init_plugins(dd->pm, dd->plg_pth);
 }
 
 // main
@@ -252,13 +253,21 @@ main(int argc, char **argv)
     signal(SIGTERM, &umd_signal_handler);
     // start daemon
     umd_start(umd);
-    // init
-    init(&dd);
+    // load config
+    load_cfg(&dd);
+    // init lua core
+    umlua_init(dd.pm);
+    // init plugins
+    init_plugins(dd.pm, dd.plg_pth);
     // loop until terminated
     umd_loop(umd);
-    // cleanup
+    // shutdown plugins (phase 0)
     umplg_terminate_all(dd.pm, 0);
+    // shutdown lua core
+    umlua_shutdown();
+    // shutdown plugins (phase 1)
     umplg_terminate_all(dd.pm, 1);
+    // cleanup
     json_object_put(dd.cfg);
     umc_free_ctx(umd->perf);
     umplg_free_mngr(dd.pm);

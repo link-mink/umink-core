@@ -57,14 +57,7 @@ fi
 # /*******/
 # /* Lua */
 # /*******/
-AC_ARG_ENABLE(lua,
-              [AS_HELP_STRING([--enable-lua], [Enable Lua [default=no]])],,
-              [enable_lua=no])
-AM_CONDITIONAL(ENABLE_LUA, test "x$enable_lua" = "xyes")
-if test "x$enable_lua" != "xno"; then
-    PKG_CHECK_MODULES([LUA], [lua >= 5.1], [], [AC_MSG_ERROR([Lua not found!])])
-    AC_DEFINE([ENABLE_LUA], [1], [Enable Lua])
-fi
+PKG_CHECK_MODULES([LUA], [lua >= 5.1], [], [AC_MSG_ERROR([Lua not found!])])
 
 # /********/
 # /* MQTT */
