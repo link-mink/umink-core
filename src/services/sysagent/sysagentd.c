@@ -33,6 +33,7 @@ typedef int (*fs_dir_filter_t)(const struct dirent *);
 // fwd declarations
 void umlua_shutdown();
 int umlua_init(umplg_mngr_t *pm);
+void umlua_start(umplg_mngr_t *pm);
 
 // sysagent daemon instance descriptor type
 typedef struct {
@@ -259,6 +260,8 @@ main(int argc, char **argv)
     umlua_init(dd.pm);
     // init plugins
     init_plugins(dd.pm, dd.plg_pth);
+    // start lua envs
+    umlua_start(dd.pm);
     // loop until terminated
     umd_loop(umd);
     // shutdown plugins (phase 0)

@@ -1438,12 +1438,19 @@ umlua_init(umplg_mngr_t *pm)
                 UMD_LLT_ERROR,
                 "plg_lua: [cannot process plugin configuration]");
     }
+    return 0;
+}
+
+/********************/
+/* umlua start envs */
+/********************/
+void
+umlua_start(umplg_mngr_t *pm)
+{
     // create environments
     lenvm_process_envs(lenv_mngr, &process_lua_envs);
     // domain socket lua cli
     pthread_create(&cli_server_th, NULL, &th_cli_server, pm);
-
-    return 0;
 }
 
 /******************/

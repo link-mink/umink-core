@@ -28,6 +28,10 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <luaconf.h>
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
 
 /*************/
 /* Plugin ID */
@@ -119,6 +123,15 @@ typedef struct mqtt_file_d mqtt_file_d_t;
 struct mqtt_conn_mngr *mqtt_mngr = NULL;
 static mqtt_file_d_t *bin_uploads = NULL;
 static pthread_mutex_t bin_upl_mtx;
+
+/***********************/
+/* MQTT lua sub-module */
+/***********************/
+int mink_lua_mqtt_pub(lua_State *L);
+
+static const struct luaL_Reg mqtt_lualib[] = { { "publish",
+                                                 &mink_lua_mqtt_pub },
+                                               { NULL, NULL } };
 
 struct mqtt_conn_d *
 mqtt_conn_new(umplg_mngr_t *pm)
@@ -723,9 +736,37 @@ mqtt_term(struct mqtt_conn_d *conn)
     mqtt_mngr_del_conn(mqtt_mngr, conn->name, false);
 }
 
-static struct mqtt_conn_d *
+int
+mqtt_mngr_send(struct mqtt_conn_mngr *m,
+               struct mqtt_conn_d *c,
+               const char *t,
+               bool retain,
+               void *d,
+               size_t dsz)
+{
+    if (!(m != NULL && c != NULL && t != NULL && d != NULL && dsz > 0)) {
+        return -100;
+    }
+
+    // setup mqtt payload
+    MQTTAsync_message pubmsg = MQTTAsync_message_initializer;
+    MQTTAsync_responseOptions opts = MQTTAsync_responseOptions_initializer;
+    opts.context = c;
+    pubmsg.payload = d;
+    pubmsg.payloadlen = dsz;
+    pubmsg.qos = 1;
+    pubmsg.retained = retain;
+
+    // send
+    return  MQTTAsync_sendMessage(c->client, t, &pubmsg, &opts);
+}
+
+struct mqtt_conn_d *
 mqtt_mngr_get_conn(struct mqtt_conn_mngr *m, const char *name)
 {
+    if (m == NULL) {
+        return NULL;
+    }
     struct mqtt_conn_d *tmp_conn = NULL;
     // lock
     pthread_mutex_lock(&m->mtx);
@@ -847,6 +888,43 @@ process_cfg(umplg_mngr_t *pm, struct mqtt_conn_mngr *mngr)
     return 0;
 }
 
+static void
+init_mqtt_lua_module(lua_State *L)
+{
+    luaL_newlib(L, mqtt_lualib);
+
+}
+
+/********************************************/
+/* MQTT module create (signal init handler) */
+/********************************************/
+static int
+mqtt_module_sig_run(umplg_sh_t *shd,
+                    umplg_data_std_t *d_in,
+                    char **d_out,
+                    size_t *out_sz,
+                    void *args)
+{
+
+    // get lua state (assume args != NULL)
+    lua_State *L = args;
+
+    // get M module from globals
+    lua_getglobal(L, "M");
+    // add MQTT sub-module
+    lua_pushstring(L, "mqtt");
+    init_mqtt_lua_module(L);
+    // add SDMC module table to M table
+    lua_settable(L, -3);
+    // remove M table from stack
+    lua_pop(L, 1);
+
+    // success
+    return 0;
+}
+
+
+
 /****************/
 /* init handler */
 /****************/
@@ -860,6 +938,18 @@ init(umplg_mngr_t *pm, umplgd_t *pd)
     }
     // binary file upload lock
     pthread_mutex_init(&bin_upl_mtx, NULL);
+
+    // create signal handler for creating MQTT module
+    // when per-thread Lua state creates the M module
+    umplg_sh_t *sh = calloc(1, sizeof(umplg_sh_t));
+    sh->id = strdup("@init_lua_sub_module:mqtt");
+    sh->run = &mqtt_module_sig_run;
+    sh->running = false;
+
+    // register signal
+    umplg_reg_signal(pm, sh);
+
+
     return 0;
 }
 
