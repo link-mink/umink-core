@@ -114,6 +114,16 @@ sysagentd_LDADD += libumrpc.la
 sysagentd_SOURCES += src/include/umrpc.h
 endif
 
+# unit tests
+check_PROGRAMS = check_umdb
+TESTS = check_umdb
+
+# umdb tester
+check_umdb_SOURCES = test/check_umdb.c
+check_umdb_CFLAGS = ${COMMON_INCLUDES}
+check_umdb_LDADD = libumdb.la
+check_umdb_LDFLAGS = -lcmocka
+
 # cleanup rule
 distclean-local: distclean-ax-prefix-umink-pkg-config-h
 distclean-ax-prefix-umink-pkg-config-h:
