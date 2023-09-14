@@ -13,6 +13,11 @@
 #include <string.h>
 #include <umdb.h>
 
+#ifdef UNIT_TESTING
+#include <setjmp.h>
+#include <cmocka.h>
+#endif
+
 /******************/
 /* sql statements */
 /******************/

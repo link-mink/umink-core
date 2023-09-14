@@ -115,14 +115,25 @@ sysagentd_SOURCES += src/include/umrpc.h
 endif
 
 # unit tests
-check_PROGRAMS = check_umdb
-TESTS = check_umdb
+check_PROGRAMS = check_umdb \
+                 check_umc
+TESTS = check_umdb \
+        check_umc
 
 # umdb tester
-check_umdb_SOURCES = test/check_umdb.c
-check_umdb_CFLAGS = ${COMMON_INCLUDES}
-check_umdb_LDADD = libumdb.la
-check_umdb_LDFLAGS = -lcmocka
+check_umdb_SOURCES = test/check_umdb.c \
+                     src/utils/umdb.c
+check_umdb_CFLAGS = ${COMMON_INCLUDES} \
+                    -DUNIT_TESTING
+check_umdb_LDFLAGS = -lcmocka \
+                     ${SQLITE_LIBS}
+
+# umc tester
+check_umc_SOURCES = test/check_umc.c \
+                    src/utils/umcounters.c
+check_umc_CFLAGS = ${COMMON_INCLUDES} \
+                   -DUNIT_TESTING
+check_umc_LDFLAGS = -lcmocka
 
 # cleanup rule
 distclean-local: distclean-ax-prefix-umink-pkg-config-h

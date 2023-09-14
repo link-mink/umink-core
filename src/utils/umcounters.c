@@ -13,6 +13,11 @@
 #include <umcounters.h>
 #include <fnmatch.h>
 
+#ifdef UNIT_TESTING
+#include <setjmp.h>
+#include <cmocka.h>
+#endif
+
 umc_ctx_t *
 umc_new_ctx()
 {

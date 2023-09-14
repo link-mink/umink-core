@@ -62,6 +62,9 @@ umdb_uauth_test(void **state)
     assert_int_equal(r, 0);
     assert_int_equal(res.id, 1);
     assert_int_equal(res.auth, 1);
+
+    // free
+    umdb_mngr_free(m);
 }
 
 static void
@@ -85,6 +88,9 @@ umdb_uget_test(void **state)
     assert_int_equal(res.id, -1);
     assert_int_equal(res.flags, 0);
     assert_string_equal(res.usr, "admin_unknown");
+
+    // free
+    umdb_mngr_free(m);
 }
 
 
@@ -127,6 +133,9 @@ umdb_get_set_test(void **state)
     assert_int_equal(r, 3);
     assert_int_equal(out_sz, 0);
     assert_null(res);
+
+    // free
+    umdb_mngr_free(m);
 }
 
 int
