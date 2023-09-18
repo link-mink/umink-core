@@ -14,8 +14,7 @@
 #include <umdb.h>
 
 #ifdef UNIT_TESTING
-#include <setjmp.h>
-#include <cmocka.h>
+#include <cmocka_tests.h>
 #endif
 
 /******************/

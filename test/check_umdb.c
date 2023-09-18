@@ -117,6 +117,7 @@ umdb_get_set_test(void **state)
     assert_int_equal(r, 0);
     assert_int_equal(out_sz, 11);
     assert_string_equal("test_value", res);
+    free(res);
 
     // get (missing key)
     res = NULL;
