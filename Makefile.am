@@ -117,10 +117,64 @@ endif
 # unit tests
 check_PROGRAMS = check_umdb \
                  check_umc \
-                 check_umd
+                 check_umd \
+                 check_umplg \
+                 check_umlua
+
+check_LTLIBRARIES = check_umplg_plugin_01.la \
+                    check_umplg_plugin_02.la
+
 TESTS = check_umdb \
         check_umc \
-        check_umd
+        check_umd \
+        check_umplg \
+        check_umlua
+
+# umlua tester
+check_umlua_SOURCES = test/check_umlua.c \
+                      src/utils/umdb.c \
+                      src/utils/umcounters.c \
+                      src/umd/umdaemon.c \
+                      src/utils/umink_plugin.c \
+                      src/services/sysagent/umlua.c \
+                      src/services/sysagent/umlua_m.c
+check_umlua_CFLAGS = ${COMMON_INCLUDES} \
+                     -DUNIT_TESTING \
+                     -DLUA_COMPAT_ALL \
+                     -DLUA_COMPAT_5_1 \
+                     -DLUA_COMPAT_5_2 \
+                     -DLUA_COMPAT_5_3 \
+                     ${JSON_C_CFLAGS} \
+                     ${LUA_CFLAGS} \
+                     ${SQLITE_LIBS}
+check_umlua_LDFLAGS = -lcmocka \
+                      ${JSON_C_LIBS} \
+                      ${LUA_LIBS}
+
+# umplg manager tester
+check_umplg_plugin_01_la_SOURCES = test/check_umplg_plugin_01.c
+check_umplg_plugin_01_la_CFLAGS = ${COMMON_INCLUDES}
+check_umplg_plugin_01_la_LDFLAGS = -version-info 1:0:0 \
+                                   -shared \
+                                   -module \
+                                   -export-dynamic \
+                                   -rpath /tmp
+
+check_umplg_plugin_02_la_SOURCES = test/check_umplg_plugin_01.c
+check_umplg_plugin_02_la_CFLAGS = ${COMMON_INCLUDES} \
+                                  -DFAIL_TESTS
+check_umplg_plugin_02_la_LDFLAGS = -version-info 1:0:0 \
+                                   -shared \
+                                   -module \
+                                   -export-dynamic \
+                                   -rpath /tmp
+
+check_umplg_SOURCES = test/check_umplg.c \
+                      src/umd/umdaemon.c \
+                      src/utils/umink_plugin.c
+check_umplg_CFLAGS = ${COMMON_INCLUDES} \
+                     -DUNIT_TESTING
+check_umplg_LDFLAGS = -lcmocka
 
 # umdaemon tester
 check_umd_SOURCES = test/check_umd.c \

@@ -15,6 +15,10 @@
 #include <stdio.h>
 #include <fnmatch.h>
 
+#ifdef UNIT_TESTING
+#include <cmocka_tests.h>
+#endif
+
 umplgd_t *
 umplg_load(umplg_mngr_t *pm, const char *fpath)
 {
