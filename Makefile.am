@@ -116,9 +116,18 @@ endif
 
 # unit tests
 check_PROGRAMS = check_umdb \
-                 check_umc
+                 check_umc \
+                 check_umd
 TESTS = check_umdb \
-        check_umc
+        check_umc \
+        check_umd
+
+# umdaemon tester
+check_umd_SOURCES = test/check_umd.c \
+                    src/umd/umdaemon.c
+check_umd_CFLAGS = ${COMMON_INCLUDES} \
+                   -DUNIT_TESTING
+check_umd_LDFLAGS = -lcmocka
 
 # umdb tester
 check_umdb_SOURCES = test/check_umdb.c \

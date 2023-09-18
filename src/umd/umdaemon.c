@@ -17,6 +17,11 @@
 #include <umdaemon.h>
 #include <umatomic.h>
 
+#ifdef UNIT_TESTING
+#include <setjmp.h>
+#include <cmocka.h>
+#endif
+
 // running UMD
 umdaemon_t *UMD = NULL;
 
