@@ -122,16 +122,20 @@ umplg_run_test_02(void **state)
     umplg_stdd_items_add(&d, &cmap);
     HASH_CLEAR(hh, cmap.table);
 
+    // plugin input data wrapper
+    umplg_idata_t idata = { UMPLG_DT_STANDARD, &d };
+
+    // run plugin method (failure due to missing args)
+    int res = umplg_run(m, 2000, idata.type, &idata, true);
+    assert_int_equal(res, -1);
+
     // add row 02
     umplg_stdd_item_add(&cmap, &item_02);
     umplg_stdd_items_add(&d, &cmap);
     HASH_CLEAR(hh, cmap.table);
 
-    // plugin input data wrapper
-    umplg_idata_t idata = { UMPLG_DT_STANDARD, &d };
-
     // run plugin method (success)
-    int res = umplg_run(m, 2000, idata.type, &idata, true);
+    res = umplg_run(m, 2000, idata.type, &idata, true);
     assert_int_equal(res, 0);
 
     // free buffer
