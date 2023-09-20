@@ -12,8 +12,9 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <setjmp.h>
-#include <cmocka.h>
 #include <string.h>
+#include <cmocka.h>
+#include <cmocka_tests.h>
 #include <stdio.h>
 #include <umcounters.h>
 

@@ -8,6 +8,12 @@
  *
  */
 
+#include <stdlib.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <setjmp.h>
+#include <string.h>
+#include <cmocka_tests.h>
 #include <umink_pkg_config.h>
 #include <umink_plugin.h>
 

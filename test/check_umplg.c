@@ -12,19 +12,26 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <setjmp.h>
-#include <cmocka.h>
 #include <string.h>
 #include <stdio.h>
+#include <cmocka.h>
+#include <cmocka_tests.h>
 #include <umdaemon.h>
 #include <umink_plugin.h>
+
+// dummy struct for state passing
+typedef struct {
+    umdaemon_t *umd;
+    umplg_mngr_t *m;
+} test_t;
+
 
 static void
 umplg_load_test(void **state)
 {
-    umdaemon_t *umd = umd_create("test_id", "test_type");
-
-    // create plg manager
-    umplg_mngr_t *m = umplg_new_mngr();
+    // get pm
+    test_t *data = *state;
+    umplg_mngr_t *m = data->m;
 
     // load dummy plugin (success)
     umplgd_t *p = umplg_load(m, ".libs/check_umplg_plugin_01.so");
@@ -33,23 +40,36 @@ umplg_load_test(void **state)
     // load dummy plugin (failure due to missing init)
     umplgd_t *p2 = umplg_load(m, ".libs/check_umplg_plugin_02.so");
     assert_null(p2);
+}
 
-    // free
-    umplg_free_mngr(m);
-    umd_destroy(umd);
+static int
+umplg_run_init(void **state)
+{
+    test_t *data = malloc(sizeof(test_t));
+    data->umd = umd_create("test_id", "test_type");
+    data->m = umplg_new_mngr();
+
+    *state = data;
+    return 0;
+}
+
+static int
+umplg_run_dtor(void **state)
+{
+    test_t *data = *state;
+    umplg_free_mngr(data->m);
+    umd_destroy(data->umd);
+    free(data);
+    return 0;
 }
 
 static void
 umplg_run_test_01(void **state)
 {
-    umdaemon_t *umd = umd_create("test_id", "test_type");
-
-    // create plg manager
-    umplg_mngr_t *m = umplg_new_mngr();
-
-    // load dummy plugin (success)
-    umplgd_t *p = umplg_load(m, ".libs/check_umplg_plugin_01.so");
-    assert_non_null(p);
+    // get pm
+    test_t *data = *state;
+    assert_non_null(data);
+    umplg_mngr_t *m = data->m;
 
     // call dummy method id = 1000
 
@@ -73,25 +93,17 @@ umplg_run_test_01(void **state)
 
     // free buffer
     umplg_stdd_free(&d);
-
-    // free
-    umplg_free_mngr(m);
-    umd_destroy(umd);
 }
 
 static void
 umplg_run_test_02(void **state)
 {
-    umdaemon_t *umd = umd_create("test_id", "test_type");
+    // get pm
+    test_t *data = *state;
+    assert_non_null(data);
+    umplg_mngr_t *m = data->m;
 
-    // create plg manager
-    umplg_mngr_t *m = umplg_new_mngr();
-
-    // load dummy plugin (success)
-    umplgd_t *p = umplg_load(m, ".libs/check_umplg_plugin_01.so");
-    assert_non_null(p);
-
-    // call dummy method id = 1000
+    // call dummy method id = 1000 w/args
 
     // input/output buffer
     umplg_data_std_t d = { .items = NULL };
@@ -124,25 +136,17 @@ umplg_run_test_02(void **state)
 
     // free buffer
     umplg_stdd_free(&d);
-
-    // free
-    umplg_free_mngr(m);
-    umd_destroy(umd);
 }
 
 static void
 umplg_run_test_03(void **state)
 {
-    umdaemon_t *umd = umd_create("test_id", "test_type");
+    // get pm
+    test_t *data = *state;
+    assert_non_null(data);
+    umplg_mngr_t *m = data->m;
 
-    // create plg manager
-    umplg_mngr_t *m = umplg_new_mngr();
-
-    // load dummy plugin (success)
-    umplgd_t *p = umplg_load(m, ".libs/check_umplg_plugin_01.so");
-    assert_non_null(p);
-
-    // call dummy method id = 1000
+    // call dummy method id = 1000 w/args, expect res
 
     // input/output buffer
     umplg_data_std_t d = { .items = NULL };
@@ -181,10 +185,6 @@ umplg_run_test_03(void **state)
 
     // free buffer
     umplg_stdd_free(&d);
-
-    // free
-    umplg_free_mngr(m);
-    umd_destroy(umd);
 }
 int
 main(int argc, char **argv)
@@ -194,5 +194,5 @@ main(int argc, char **argv)
                                         cmocka_unit_test(umplg_run_test_02),
                                         cmocka_unit_test(umplg_run_test_03) };
 
-    return cmocka_run_group_tests(tests, NULL, NULL);
+    return cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
 }

@@ -8,6 +8,8 @@
  *
  */
 
+#include <stdarg.h>
+#include <stddef.h>
 #include <setjmp.h>
 #include <cmocka.h>
 
@@ -23,4 +25,3 @@ test_strdup(const char *s)
     return (char *)memcpy(new, s, len);
 }
 #define strdup test_strdup
-

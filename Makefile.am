@@ -155,7 +155,9 @@ check_umlua_LDFLAGS = -lcmocka \
 check_umplg_plugin_01_la_SOURCES = test/check_umplg_plugin_01.c \
                                    src/utils/umink_plugin.c \
                                    src/umd/umdaemon.c
-check_umplg_plugin_01_la_CFLAGS = ${COMMON_INCLUDES}
+check_umplg_plugin_01_la_CFLAGS = ${COMMON_INCLUDES} \
+                                  -DUNIT_TESTING
+check_umplg_plugin_01_la_LIBADD = -lcmocka
 check_umplg_plugin_01_la_LDFLAGS = -version-info 1:0:0 \
                                    -shared \
                                    -module \
@@ -166,7 +168,8 @@ check_umplg_plugin_02_la_SOURCES = test/check_umplg_plugin_01.c \
                                    src/utils/umink_plugin.c \
                                    src/umd/umdaemon.c
 check_umplg_plugin_02_la_CFLAGS = ${COMMON_INCLUDES} \
-                                  -DFAIL_TESTS
+                                  -DFAIL_TESTS \
+                                  -DUNIT_TESTING
 check_umplg_plugin_02_la_LDFLAGS = -version-info 1:0:0 \
                                    -shared \
                                    -module \
@@ -176,8 +179,7 @@ check_umplg_plugin_02_la_LDFLAGS = -version-info 1:0:0 \
 check_umplg_SOURCES = test/check_umplg.c \
                       src/umd/umdaemon.c \
                       src/utils/umink_plugin.c
-check_umplg_CFLAGS = ${COMMON_INCLUDES} \
-                     -DUNIT_TESTING
+check_umplg_CFLAGS = ${COMMON_INCLUDES}
 check_umplg_LDFLAGS = -lcmocka
 
 # umdaemon tester
