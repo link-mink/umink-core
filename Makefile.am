@@ -152,7 +152,9 @@ check_umlua_LDFLAGS = -lcmocka \
                       ${LUA_LIBS}
 
 # umplg manager tester
-check_umplg_plugin_01_la_SOURCES = test/check_umplg_plugin_01.c
+check_umplg_plugin_01_la_SOURCES = test/check_umplg_plugin_01.c \
+                                   src/utils/umink_plugin.c \
+                                   src/umd/umdaemon.c
 check_umplg_plugin_01_la_CFLAGS = ${COMMON_INCLUDES}
 check_umplg_plugin_01_la_LDFLAGS = -version-info 1:0:0 \
                                    -shared \
@@ -160,7 +162,9 @@ check_umplg_plugin_01_la_LDFLAGS = -version-info 1:0:0 \
                                    -export-dynamic \
                                    -rpath /tmp
 
-check_umplg_plugin_02_la_SOURCES = test/check_umplg_plugin_01.c
+check_umplg_plugin_02_la_SOURCES = test/check_umplg_plugin_01.c \
+                                   src/utils/umink_plugin.c \
+                                   src/umd/umdaemon.c
 check_umplg_plugin_02_la_CFLAGS = ${COMMON_INCLUDES} \
                                   -DFAIL_TESTS
 check_umplg_plugin_02_la_LDFLAGS = -version-info 1:0:0 \
