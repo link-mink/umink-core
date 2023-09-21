@@ -31,6 +31,10 @@
 #include <errno.h>
 #include <poll.h>
 
+#ifdef UNIT_TESTING
+#include <cmocka_tests.h>
+#endif
+
 /************************/
 /* Thread local storage */
 /************************/
