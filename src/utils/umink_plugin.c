@@ -23,7 +23,7 @@ umplgd_t *
 umplg_load(umplg_mngr_t *pm, const char *fpath)
 {
     // open and resolve symbols now
-    void *h = dlopen(fpath, RTLD_NOW | RTLD_GLOBAL);
+    void *h = dlopen(fpath, RTLD_NOW);
     if (!h) {
         umd_log(UMD, UMD_LLT_ERROR, "umplg_load: %s", dlerror());
         return NULL;
