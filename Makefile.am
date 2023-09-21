@@ -19,6 +19,9 @@ endif
 # compiler and linkerflags
 COMMON_INCLUDES = -I. -Isrc/include
 
+# asan flags
+ASAN_FLAGS = -fsanitize=address -fno-omit-frame-pointer
+
 # umINK directories
 confdir = $(sysconfdir)/umink
 
@@ -139,16 +142,16 @@ check_umlua_SOURCES = test/check_umlua.c \
                       src/services/sysagent/umlua.c \
                       src/services/sysagent/umlua_m.c
 check_umlua_CFLAGS = ${COMMON_INCLUDES} \
-                     -DUNIT_TESTING \
                      -DLUA_COMPAT_ALL \
                      -DLUA_COMPAT_5_1 \
                      -DLUA_COMPAT_5_2 \
                      -DLUA_COMPAT_5_3 \
                      ${JSON_C_CFLAGS} \
                      ${LUA_CFLAGS} \
-                     ${SQLITE_LIBS}
+                     ${ASAN_FLAGS}
 check_umlua_LDFLAGS = -lcmocka \
                       ${JSON_C_LIBS} \
+                      ${SQLITE_LIBS} \
                       ${LUA_LIBS}
 
 # umplg manager tester
@@ -156,7 +159,7 @@ check_umplg_plugin_01_la_SOURCES = test/check_umplg_plugin_01.c \
                                    src/utils/umink_plugin.c \
                                    src/umd/umdaemon.c
 check_umplg_plugin_01_la_CFLAGS = ${COMMON_INCLUDES} \
-                                  -DUNIT_TESTING
+                                  ${ASAN_FLAGS}
 check_umplg_plugin_01_la_LIBADD = -lcmocka
 check_umplg_plugin_01_la_LDFLAGS = -version-info 1:0:0 \
                                    -shared \
@@ -168,8 +171,8 @@ check_umplg_plugin_02_la_SOURCES = test/check_umplg_plugin_01.c \
                                    src/utils/umink_plugin.c \
                                    src/umd/umdaemon.c
 check_umplg_plugin_02_la_CFLAGS = ${COMMON_INCLUDES} \
-                                  -DFAIL_TESTS \
-                                  -DUNIT_TESTING
+                                  ${ASAN_FLAGS} \
+                                  -DFAIL_TESTS
 check_umplg_plugin_02_la_LDFLAGS = -version-info 1:0:0 \
                                    -shared \
                                    -module \
@@ -179,21 +182,22 @@ check_umplg_plugin_02_la_LDFLAGS = -version-info 1:0:0 \
 check_umplg_SOURCES = test/check_umplg.c \
                       src/umd/umdaemon.c \
                       src/utils/umink_plugin.c
-check_umplg_CFLAGS = ${COMMON_INCLUDES}
+check_umplg_CFLAGS = ${COMMON_INCLUDES} \
+                     ${ASAN_FLAGS}
 check_umplg_LDFLAGS = -lcmocka
 
 # umdaemon tester
 check_umd_SOURCES = test/check_umd.c \
                     src/umd/umdaemon.c
 check_umd_CFLAGS = ${COMMON_INCLUDES} \
-                   -DUNIT_TESTING
+                   ${ASAN_FLAGS}
 check_umd_LDFLAGS = -lcmocka
 
 # umdb tester
 check_umdb_SOURCES = test/check_umdb.c \
                      src/utils/umdb.c
 check_umdb_CFLAGS = ${COMMON_INCLUDES} \
-                    -DUNIT_TESTING
+                    ${ASAN_FLAGS}
 check_umdb_LDFLAGS = -lcmocka \
                      ${SQLITE_LIBS}
 
@@ -201,7 +205,7 @@ check_umdb_LDFLAGS = -lcmocka \
 check_umc_SOURCES = test/check_umc.c \
                     src/utils/umcounters.c
 check_umc_CFLAGS = ${COMMON_INCLUDES} \
-                   -DUNIT_TESTING
+                   ${ASAN_FLAGS}
 check_umc_LDFLAGS = -lcmocka
 
 # cleanup rule

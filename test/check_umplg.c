@@ -14,7 +14,6 @@
 #include <setjmp.h>
 #include <string.h>
 #include <stdio.h>
-#include <cmocka.h>
 #include <cmocka_tests.h>
 #include <umdaemon.h>
 #include <umink_plugin.h>

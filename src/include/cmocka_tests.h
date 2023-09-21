@@ -15,6 +15,7 @@
 
 // override needed due to this:
 // https://github.com/clibs/cmocka/issues/17
+/*
 static char *
 test_strdup(const char *s)
 {
@@ -25,3 +26,4 @@ test_strdup(const char *s)
     return (char *)memcpy(new, s, len);
 }
 #define strdup test_strdup
+*/
