@@ -35,49 +35,6 @@ typedef struct {
     umplg_mngr_t *m;
 } test_t;
 
-static int
-umplg_run_init(void **state)
-{
-    test_t *data = malloc(sizeof(test_t));
-    data->umd = umd_create("test_id", "test_type");
-    data->m = umplg_new_mngr();
-
-    *state = data;
-    return 0;
-}
-
-static int
-umplg_run_dtor(void **state)
-{
-    test_t *data = *state;
-    umplg_free_mngr(data->m);
-    umd_destroy(data->umd);
-    free(data);
-    return 0;
-}
-
-static void
-umlua_init_test(void **state)
-{
-    // get pm
-    test_t *data = *state;
-    assert_non_null(data);
-    umplg_mngr_t *m = data->m;
-    m->cfg = NULL;
-
-    // init lua core
-    umlua_init(m);
-
-    // start lua envs
-    umlua_start(m);
-
-    // stop
-    umd_signal_handler(SIGTERM);
-
-    // free
-    umlua_shutdown();
-}
-
 static void
 load_cfg(umplg_mngr_t *m)
 {
@@ -106,6 +63,103 @@ load_cfg(umplg_mngr_t *m)
     free(b);
 }
 
+static int
+umplg_run_init(void **state)
+{
+    test_t *data = malloc(sizeof(test_t));
+    data->umd = umd_create("test_id", "test_type");
+    data->m = umplg_new_mngr();
+
+    // load dummy cfg
+    load_cfg(data->m);
+
+    // init lua core
+    umlua_init(data->m);
+
+    // start lua envs
+    umlua_start(data->m);
+
+    *state = data;
+    return 0;
+}
+
+static int
+umplg_run_dtor(void **state)
+{
+    test_t *data = *state;
+    // stop
+    umd_signal_handler(SIGTERM);
+    // free
+    umlua_shutdown();
+    json_object_put(data->m->cfg);
+    umplg_free_mngr(data->m);
+    umd_destroy(data->umd);
+    free(data);
+
+    return 0;
+}
+
+// test signal handler (missing handler)
+static void
+umlua_test_signal(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    assert_non_null(data);
+    umplg_mngr_t *m = data->m;
+
+    // simulate lua script (create dummy signal)
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_EVENT_XX", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 1);
+    assert_null(b);
+}
+
+static void
+signal_match_cb(umplg_sh_t *shd, void *args)
+{
+    shd->min_auth_lvl = shd->min_auth_lvl ? 0 : 1;
+}
+
+// test signal handler (insufficient privileges)
+static void
+umlua_test_user_privs(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    assert_non_null(data);
+    umplg_mngr_t *m = data->m;
+
+    // simulate lua script (create dummy signal)
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_EVENT_01", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    free(b);
+    b = NULL;
+
+    // set min user role level for signal to 1 (admin)
+    umplg_match_signal(m, "TEST_EVENT_01", &signal_match_cb, NULL);
+
+    // run signal again (expected failure)
+    r = umplg_proc_signal(m, "TEST_EVENT_01", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 2);
+    assert_null(b);
+
+    // revert min user role level to 0
+    umplg_match_signal(m, "TEST_EVENT_01", &signal_match_cb, NULL);
+}
+
 // call signal handler, return static string
 static void
 umlua_test_01(void **state)
@@ -114,15 +168,6 @@ umlua_test_01(void **state)
     test_t *data = *state;
     assert_non_null(data);
     umplg_mngr_t *m = data->m;
-
-    // load dummy cfg
-    load_cfg(m);
-
-    // init lua core
-    umlua_init(m);
-
-    // start lua envs
-    umlua_start(m);
 
     // simulate lua script (create dummy signal)
     //
@@ -135,13 +180,6 @@ umlua_test_01(void **state)
     assert_int_equal(r, 0);
     assert_string_equal(b, "test_data");
     free(b);
-
-    // stop
-    umd_signal_handler(SIGTERM);
-
-    // free
-    json_object_put(m->cfg);
-    umlua_shutdown();
 }
 
 // call signal handler with args (value without a key) and
@@ -153,15 +191,6 @@ umlua_test_02(void **state)
     test_t *data = *state;
     assert_non_null(data);
     umplg_mngr_t *m = data->m;
-
-    // load dummy cfg
-    load_cfg(m);
-
-    // init lua core
-    umlua_init(m);
-
-    // start lua envs
-    umlua_start(m);
 
     // simulate lua script (create dummy signal)
 
@@ -183,14 +212,7 @@ umlua_test_02(void **state)
     assert_string_equal(b, "test_arg_data");
     free(b);
     HASH_CLEAR(hh, items.table);
-
-    // stop
-    umd_signal_handler(SIGTERM);
-
-    // free
     umplg_stdd_free(&d);
-    json_object_put(m->cfg);
-    umlua_shutdown();
 }
 
 // call signal handler with args (value with a key) and
@@ -202,15 +224,6 @@ umlua_test_03(void **state)
     test_t *data = *state;
     assert_non_null(data);
     umplg_mngr_t *m = data->m;
-
-    // load dummy cfg
-    load_cfg(m);
-
-    // init lua core
-    umlua_init(m);
-
-    // start lua envs
-    umlua_start(m);
 
     // simulate lua script (create dummy signal)
 
@@ -232,14 +245,7 @@ umlua_test_03(void **state)
     assert_int_equal(r, 0);
     assert_null(b);
     HASH_CLEAR(hh, items.table);
-
-    // stop
-    umd_signal_handler(SIGTERM);
-
-    // free
     umplg_stdd_free(&d);
-    json_object_put(m->cfg);
-    umlua_shutdown();
 }
 
 // call signal handler with args (value with a key) and
@@ -251,15 +257,6 @@ umlua_test_04(void **state)
     test_t *data = *state;
     assert_non_null(data);
     umplg_mngr_t *m = data->m;
-
-    // load dummy cfg
-    load_cfg(m);
-
-    // init lua core
-    umlua_init(m);
-
-    // start lua envs
-    umlua_start(m);
 
     // simulate lua script (create dummy signal)
 
@@ -282,36 +279,18 @@ umlua_test_04(void **state)
     assert_string_equal(b, "test_arg_data");
     HASH_CLEAR(hh, items.table);
     free(b);
-
-    // stop
-    umd_signal_handler(SIGTERM);
-
-    // free
     umplg_stdd_free(&d);
-    json_object_put(m->cfg);
-    umlua_shutdown();
 }
 
 int
 main(int argc, char **argv)
 {
-    const struct CMUnitTest tests[] = {
-        cmocka_unit_test_setup_teardown(umlua_init_test,
-                                        umplg_run_init,
-                                        umplg_run_dtor),
-        cmocka_unit_test_setup_teardown(umlua_test_01,
-                                        umplg_run_init,
-                                        umplg_run_dtor),
-        cmocka_unit_test_setup_teardown(umlua_test_02,
-                                        umplg_run_init,
-                                        umplg_run_dtor),
-        cmocka_unit_test_setup_teardown(umlua_test_03,
-                                        umplg_run_init,
-                                        umplg_run_dtor),
-        cmocka_unit_test_setup_teardown(umlua_test_04,
-                                        umplg_run_init,
-                                        umplg_run_dtor),
-    };
+    const struct CMUnitTest tests[] = { cmocka_unit_test(umlua_test_signal),
+                                        cmocka_unit_test(umlua_test_user_privs),
+                                        cmocka_unit_test(umlua_test_01),
+                                        cmocka_unit_test(umlua_test_02),
+                                        cmocka_unit_test(umlua_test_03),
+                                        cmocka_unit_test(umlua_test_04) };
 
-    return cmocka_run_group_tests(tests, NULL, NULL);
+    return cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
 }
