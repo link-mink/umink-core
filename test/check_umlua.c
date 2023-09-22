@@ -22,6 +22,8 @@
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
+#include <unistd.h>
+#include <math.h>
 #include <cmocka_tests.h>
 
 // fwd declarations
@@ -69,6 +71,7 @@ umplg_run_init(void **state)
     test_t *data = malloc(sizeof(test_t));
     data->umd = umd_create("test_id", "test_type");
     data->m = umplg_new_mngr();
+    data->umd->perf = umc_new_ctx();
 
     // load dummy cfg
     load_cfg(data->m);
@@ -93,6 +96,7 @@ umplg_run_dtor(void **state)
     umlua_shutdown();
     json_object_put(data->m->cfg);
     umplg_free_mngr(data->m);
+    umc_free_ctx(data->umd->perf);
     umd_destroy(data->umd);
     free(data);
 
@@ -177,6 +181,13 @@ umlua_test_01(void **state)
 
     // run signal
     int r = umplg_proc_signal(m, "TEST_EVENT_01", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_string_equal(b, "test_data");
+    free(b);
+    b = NULL;
+
+    // call again, check signal handler with multiple names
+    r = umplg_proc_signal(m, "TEST_EVENT_01_02", NULL, &b, &b_sz, 0, NULL);
     assert_int_equal(r, 0);
     assert_string_equal(b, "test_data");
     free(b);
@@ -282,15 +293,88 @@ umlua_test_04(void **state)
     umplg_stdd_free(&d);
 }
 
+//  check lua env running every 500msec, inc counter by 1, expect 4
+static void
+umlua_test_env_01(void **state)
+{
+    // get pm
+    test_t *data = *state;
+
+    // sleep for 2 seconds (counters value should be at 4)
+    sleep(2);
+
+    // get custom counter
+    umc_t *c = umc_get(data->umd->perf, "test_env_counter", true);
+    assert_non_null(c);
+    assert_int_equal(c->values.last.value, 4);
+
+    // check runtime counters (execution count)
+    c = umc_get(data->umd->perf, "lua.environment.TEST_ENV.count", true);
+    assert_non_null(c);
+    assert_int_equal(c->values.last.value, 4);
+
+    // check runtime counters (rate, should be around 2 per second for
+    // a 500msec frequency)
+    double cr = umc_get_rate(c, true);
+    assert_int_equal(ceil(cr), 2);
+
+    // check runtime counters (error count)
+    c = umc_get(data->umd->perf, "lua.environment.TEST_ENV.error", true);
+    assert_non_null(c);
+    assert_int_equal(c->values.last.value, 0);
+
+    // check runtime counters (lag)
+    c = umc_get(data->umd->perf, "lua.environment.TEST_ENV.lag", true);
+    assert_non_null(c);
+    if (c->values.last.value == 0) {
+        fail();
+    }
+}
+
+//  check counters again (check_umc), this time from lua script
+static void
+umlua_test_05(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_EVENT_04", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+
+    // get INC counter "test_05_c1"
+    umc_t *c = umc_get(data->umd->perf, "test_05_c1", true);
+    assert_non_null(c);
+    assert_int_equal(c->values.last.value, 2);
+
+    // get GAUGE counter "test_05_c2"
+    c = umc_get(data->umd->perf, "test_05_c2", true);
+    assert_non_null(c);
+    assert_int_equal(c->values.last.value, 998);
+    assert_int_equal(c->values.max, 999);
+
+    // cehck result (perf_match test)
+    assert_string_equal(b, "test_05_c1test_05_c2");
+    free(b);
+}
+
 int
 main(int argc, char **argv)
 {
-    const struct CMUnitTest tests[] = { cmocka_unit_test(umlua_test_signal),
+    const struct CMUnitTest tests[] = { cmocka_unit_test(umlua_test_env_01),
+                                        cmocka_unit_test(umlua_test_signal),
                                         cmocka_unit_test(umlua_test_user_privs),
                                         cmocka_unit_test(umlua_test_01),
                                         cmocka_unit_test(umlua_test_02),
                                         cmocka_unit_test(umlua_test_03),
-                                        cmocka_unit_test(umlua_test_04) };
+                                        cmocka_unit_test(umlua_test_04),
+                                        cmocka_unit_test(umlua_test_05) };
 
     return cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
 }

@@ -21,11 +21,6 @@
 static void
 umc_create_free_test(void **state)
 {
-
-    int *const temporary = (int *)malloc(sizeof(int));
-
-    free(temporary);
-
     // create ctx
     umc_ctx_t *umc = umc_new_ctx();
     assert_non_null(umc);

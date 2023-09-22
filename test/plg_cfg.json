@@ -10,7 +10,8 @@
         "interval": 0,
         "path": "test/test_event_01.lua",
         "events": [
-          "TEST_EVENT_01"
+          "TEST_EVENT_01",
+          "TEST_EVENT_01_02"
         ]
       },
       {
@@ -29,6 +30,23 @@
         "path": "test/test_event_03.lua",
         "events": [
           "TEST_EVENT_03"
+        ]
+      },
+      {
+        "name": "TEST_EVENT_04",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/test_event_04.lua",
+        "events": [
+          "TEST_EVENT_04"
+        ]
+      },
+      {
+        "name": "TEST_ENV",
+        "auto_start": true,
+        "interval": 500,
+        "path": "test/test_env.lua",
+        "events": [
         ]
       }
     ]
