@@ -82,7 +82,7 @@ struct lua_env_d {
     // perf counters
     struct perf_d env_perf;
     // number of signals
-    size_t sngl_nr;
+    size_t sgnl_nr;
     // signal perf counters
     struct perf_d *sgnl_perf;
     // dbm
@@ -1051,6 +1051,9 @@ process_cfg(umplg_mngr_t *pm, struct lua_env_mngr *lem)
 
             // register events
             int ev_l = json_object_array_length(j_ev);
+            // alloc perf counters list
+            env->sgnl_perf = malloc(ev_l * sizeof(struct perf_d));
+            // process events
             for (int j = 0; j < ev_l; ++j) {
                 // get array object (v declared in json_object_object_foreach
                 // macro)
@@ -1085,10 +1088,8 @@ process_cfg(umplg_mngr_t *pm, struct lua_env_mngr *lem)
                 utarray_push_back(sh->args, &env);
 
                 // performance counters
-                ++env->sngl_nr;
-                env->sgnl_perf = realloc(env->sgnl_perf,
-                                         env->sngl_nr * sizeof(struct perf_d));
-                struct perf_d *p = &env->sgnl_perf[env->sngl_nr - 1];
+                ++env->sgnl_nr;
+                struct perf_d *p = &env->sgnl_perf[env->sgnl_nr - 1];
                 utarray_push_back(sh->args, &p);
 
                 // register signal
