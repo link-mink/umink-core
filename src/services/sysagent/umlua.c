@@ -856,10 +856,22 @@ lua_sig_hndlr_run(umplg_sh_t *shd,
 
     // check return (STRING/NUMBER)
     if (lua_isstring(L, -1)) {
+        const char *str = lua_tostring(L, -1);
+        size_t sl = strlen(str);
+        // empty string is ok
+        if (sl == 0) {
+            *out_sz = 0;
+            // pop result or error message
+            lua_pop(L, 1);
+            shd->running = false;
+            pthread_mutex_unlock(&shd->mtx);
+            return UMPLG_RES_SUCCESS;
+        }
+
         // copy lua string to output buffer
-        size_t sz = strlen(lua_tostring(L, -1)) + 1;
+        size_t sz = sl + 1;
         char *out = malloc(sz);
-        int r = snprintf(out, sz, "%s", lua_tostring(L, -1));
+        int r = snprintf(out, sz, "%s", str);
         // error (buffer too small)
         if (r <= 0 || r >= sz) {
             free(out);
