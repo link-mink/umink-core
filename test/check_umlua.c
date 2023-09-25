@@ -364,6 +364,126 @@ umlua_test_05(void **state)
     free(b);
 }
 
+//  check signal call from another signal
+static void
+umlua_test_06(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_EVENT_05", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    assert_string_equal(b, "test_data");
+    free(b);
+}
+
+//  check signal recursion check
+static void
+umlua_test_07(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_EVENT_06", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    assert_string_equal(b, "ERR [TEST_EVENT_06]: signal recursion prevented");
+    free(b);
+}
+
+//  check multiple mink_stdd arg levels (Lref)
+static void
+umlua_test_08(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // input data
+    umplg_data_std_t d = { .items = NULL };
+    umplg_stdd_init(&d);
+    umplg_data_std_items_t items = { .table = NULL };
+    umplg_data_std_item_t item_test = { .name = "",
+                                        .value = "test_arg_data" };
+    umplg_stdd_item_add(&items, &item_test);
+    umplg_stdd_items_add(&d, &items);
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_EVENT_07", &d, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    assert_string_equal(b, "test_arg_dataevent_02_args");
+    free(b);
+    HASH_CLEAR(hh, items.table);
+    umplg_stdd_free(&d);
+}
+
+//  check db set/get methods (from lua script this time)
+static void
+umlua_test_09(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // input data
+    umplg_data_std_t d = { .items = NULL };
+    umplg_stdd_init(&d);
+    umplg_data_std_items_t items = { .table = NULL };
+    umplg_data_std_item_t item_test = { .name = "",
+                                        .value = "set" };
+    umplg_stdd_item_add(&items, &item_test);
+    umplg_stdd_items_add(&d, &items);
+
+    // run signal (set)
+    int r = umplg_proc_signal(m, "TEST_EVENT_08", &d, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_int_equal(b_sz, 0);
+    assert_null(b);
+    HASH_CLEAR(hh, items.table);
+
+    // run signal (get)
+    umplg_stdd_free(&d);
+    d.items = NULL;
+
+    umplg_stdd_init(&d);
+    item_test.name = "";
+    item_test.value = "get";
+    umplg_stdd_item_add(&items, &item_test);
+    umplg_stdd_items_add(&d, &items);
+
+    r = umplg_proc_signal(m, "TEST_EVENT_08", &d, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    assert_string_equal(b, "test_value");
+    free(b);
+    b = NULL;
+    HASH_CLEAR(hh, items.table);
+    umplg_stdd_free(&d);
+}
+
+
 int
 main(int argc, char **argv)
 {
@@ -374,7 +494,11 @@ main(int argc, char **argv)
                                         cmocka_unit_test(umlua_test_02),
                                         cmocka_unit_test(umlua_test_03),
                                         cmocka_unit_test(umlua_test_04),
-                                        cmocka_unit_test(umlua_test_05) };
+                                        cmocka_unit_test(umlua_test_05),
+                                        cmocka_unit_test(umlua_test_06),
+                                        cmocka_unit_test(umlua_test_07),
+                                        cmocka_unit_test(umlua_test_08),
+                                        cmocka_unit_test(umlua_test_09) };
 
     return cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
 }

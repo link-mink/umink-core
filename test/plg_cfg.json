@@ -42,6 +42,42 @@
         ]
       },
       {
+        "name": "TEST_EVENT_05",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/test_event_05.lua",
+        "events": [
+          "TEST_EVENT_05"
+        ]
+      },
+      {
+        "name": "TEST_EVENT_06",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/test_event_06.lua",
+        "events": [
+          "TEST_EVENT_06"
+        ]
+      },
+      {
+        "name": "TEST_EVENT_07",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/test_event_07.lua",
+        "events": [
+          "TEST_EVENT_07"
+        ]
+      },
+      {
+        "name": "TEST_EVENT_08",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/test_event_08.lua",
+        "events": [
+          "TEST_EVENT_08"
+        ]
+      },
+      {
         "name": "TEST_ENV",
         "auto_start": true,
         "interval": 500,
