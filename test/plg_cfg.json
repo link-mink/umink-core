@@ -78,6 +78,15 @@
         ]
       },
       {
+        "name": "TEST_EVENT_09",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/test_event_09.lua",
+        "events": [
+          "TEST_EVENT_09"
+        ]
+      },
+      {
         "name": "TEST_ENV",
         "auto_start": true,
         "interval": 500,

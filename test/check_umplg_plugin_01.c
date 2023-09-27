@@ -26,7 +26,9 @@ static const char *PLG_ID = "test_plugin_01";
 /* list of command implemented by this plugin */
 /**********************************************/
 int COMMANDS[] = {
-    // dummy command id
+    // predefined cmd id (unused, only for testing)
+    CMD_LUA_CALL,
+    // dummy command is
     1000,
     2000,
     // end of list marker
@@ -61,8 +63,34 @@ init(umplg_mngr_t *pm, umplgd_t *pd)
 int
 run_local(umplg_mngr_t *pm, umplgd_t *pd, int cmd_id, umplg_idata_t *data)
 {
-    // id = 1000
-    if (cmd_id == 1000) {
+    // id = CMD_LUA_CALL
+    if (cmd_id == CMD_LUA_CALL) {
+        // get data map
+        umplg_data_std_t *dmap = data->data;
+        // get data, 3 input strings expected
+        if (utarray_len(dmap->items) < 3) {
+            return -1;
+        }
+        umplg_data_std_items_t *item_01 = utarray_eltptr(dmap->items, 0);
+        umplg_data_std_items_t *item_02 = utarray_eltptr(dmap->items, 1);
+        umplg_data_std_items_t *item_03 = utarray_eltptr(dmap->items, 2);
+        if (strcmp(item_01->table->value, "test_data_01") != 0 ||
+            strcmp(item_02->table->value, "test_data_02") != 0 ||
+            strcmp(item_03->table->value, "test_data_03") != 0) {
+            return -1;
+        }
+        // add result
+        umplg_data_std_items_t items = { .table = NULL };
+        umplg_data_std_item_t item_res = { .name = "test_res_key",
+                                           .value = "test_res_value" };
+        umplg_stdd_item_add(&items, &item_res);
+        umplg_stdd_items_add(dmap, &items);
+        HASH_CLEAR(hh, items.table);
+
+        return 0;
+
+        // id = 1000
+    } else if (cmd_id == 1000) {
         return 0;
 
         // id = 2000

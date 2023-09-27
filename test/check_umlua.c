@@ -483,6 +483,41 @@ umlua_test_09(void **state)
     umplg_stdd_free(&d);
 }
 
+//  check cmd_call (from lua script this time)
+static void
+umlua_test_10(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    umplg_mngr_t *m = data->m;
+
+    // load dummy plugin (implements CMD_LUA_CALL)
+    umplgd_t *p = umplg_load(m, ".libs/check_umplg_plugin_01.so");
+    assert_non_null(p);
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // input data
+    umplg_data_std_t d = { .items = NULL };
+    umplg_stdd_init(&d);
+    umplg_data_std_items_t items = { .table = NULL };
+    umplg_data_std_item_t item_test = { .name = "",
+                                        .value = "set" };
+    umplg_stdd_item_add(&items, &item_test);
+    umplg_stdd_items_add(&d, &items);
+
+    // run signal (set)
+    int r = umplg_proc_signal(m, "TEST_EVENT_09", &d, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    assert_string_equal(b, "test_res_value");
+    HASH_CLEAR(hh, items.table);
+
+    free(b);
+    umplg_stdd_free(&d);
+}
 
 int
 main(int argc, char **argv)
@@ -498,7 +533,8 @@ main(int argc, char **argv)
                                         cmocka_unit_test(umlua_test_06),
                                         cmocka_unit_test(umlua_test_07),
                                         cmocka_unit_test(umlua_test_08),
-                                        cmocka_unit_test(umlua_test_09) };
+                                        cmocka_unit_test(umlua_test_09),
+                                        cmocka_unit_test(umlua_test_10) };
 
     return cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
 }
