@@ -9,7 +9,6 @@ M.perf_set("test_05_c2", 998)
 M.perf_set("test_05_c1", 1)
 -- match
 local d = M.perf_match("test_05_c*")
-local inspect = require("inspect")
 -- sort keys
 local rt = {}
 local res = ""
