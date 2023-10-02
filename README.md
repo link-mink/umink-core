@@ -1,16 +1,14 @@
-##### *μmINK framework*
-----
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-- Core components
-  - [**sysagentd**](#sysagentd) - System agent daemon      
-  - [**plg_lua**](#plg-lua) - LuaJIT plugin                                                                               
-  - [**plg_mqtt**](#plg-mqtt) - MQTT plugin 
-
-- [License](#license)
+# umINK Framework
 
 
+## Introduction
 
-### License
-----
-This software is licensed under the MIT license
+The **umINK Framework** is a cutting-edge provisioning software designed to
+streamline and optimize the provisioning process, especially in the realm of
+complex vendor-specific implementations. At its core, umINK leverages the power
+of Lua scripting to bring efficiency and simplicity to the most intricate
+provisioning tasks.
+
+# License
+
+This software is licensed under the [MIT license](https://opensource.org/licenses/MIT)
