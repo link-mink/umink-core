@@ -43,3 +43,4 @@ tags
 *.pyc
 .version
 Session.vim
+/check_*
