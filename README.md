@@ -1,5 +1,6 @@
 # umINK Framework
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=link-mink_umink-core&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=link-mink_umink-core)
 
 ## Introduction
 
