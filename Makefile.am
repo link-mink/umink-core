@@ -20,7 +20,10 @@ endif
 COMMON_INCLUDES = -I. -Isrc/include
 
 # asan flags
-ASAN_FLAGS = -fsanitize=address -fno-omit-frame-pointer
+ASAN_FLAGS = -fsanitize=address \
+	     -fno-omit-frame-pointer \
+	     -fprofile-abs-path \
+	     --coverage
 
 # umINK directories
 confdir = $(sysconfdir)/umink
