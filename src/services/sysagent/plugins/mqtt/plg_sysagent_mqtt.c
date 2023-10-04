@@ -109,7 +109,8 @@ struct mqtt_file_d {
 /* fwd declarations */
 /********************/
 static int mqtt_conn_sub(struct mqtt_conn_d *conn, const char *t);
-static int mqtt_conn_connect(struct mqtt_conn_d *conn, struct json_object *j_conn);
+static int mqtt_conn_connect(struct mqtt_conn_d *conn,
+                             const struct json_object *j_conn);
 static void *mqtt_proc_thread(void *arg);
 
 /*********/
@@ -218,7 +219,7 @@ mqtt_bin_upl_add(const char *path, size_t fsz)
     // add new
     f = malloc(sizeof(mqtt_file_d_t));
     strcpy(f->path, path);
-    strcpy(f->uuid, uuid_str);
+    memcpy(f->uuid, uuid_str, sizeof(uuid_str));
     f->ts = time(NULL);
     f->size = fsz;
     HASH_ADD_STR(bin_uploads, uuid, f);
@@ -252,7 +253,7 @@ mqtt_bin_upl_del(const char *uuid)
 
 // create temp file name string
 static void
-gen_temp_fname(mqtt_file_d_t *f, char *b)
+gen_temp_fname(const mqtt_file_d_t *f, char *b)
 {
     b[0] = '\0';
     strcat(b, f->path);
@@ -265,14 +266,14 @@ gen_temp_fname(mqtt_file_d_t *f, char *b)
 /* handle binary topics */
 /************************/
 static int
-mqtt_handle_bin(char *tpc, MQTTAsync_message *msg)
+mqtt_handle_bin(const char *tpc, const MQTTAsync_message *msg)
 {
     // temp copy of topic string
     char tmp_t[strlen(tpc) + 1];
     char *sp;
-    char *dev_uuid = NULL;
-    char *file_uuid = NULL;
-    char *file_op = NULL;
+    const char *dev_uuid = NULL;
+    const char *file_uuid = NULL;
+    const char *file_op = NULL;
     strcpy(tmp_t, tpc);
     // tokenize
     int tc = 0;
@@ -345,7 +346,7 @@ mqtt_handle_bin(char *tpc, MQTTAsync_message *msg)
 
         // write in chunks
         size_t sz = msg->payloadlen;
-        uint8_t *pld = msg->payload;
+        const uint8_t *pld = msg->payload;
         size_t chunk = sz < 2097152 ? sz : 2097152;
         while (sz > 0) {
             // overflow check
@@ -500,7 +501,7 @@ mqtt_on_connect(void *context, char *cause)
 }
 
 static int
-mqtt_conn_connect(struct mqtt_conn_d *conn, struct json_object *j_conn)
+mqtt_conn_connect(struct mqtt_conn_d *conn, const struct json_object *j_conn)
 {
     // address and client id
     struct json_object *j_addr = json_object_object_get(j_conn, "address");
@@ -630,7 +631,9 @@ mqtt_mngr_new()
 }
 
 static struct mqtt_conn_d *
-mqtt_mngr_add_conn(struct mqtt_conn_mngr *m, umplg_mngr_t *pm, struct json_object *j_conn)
+mqtt_mngr_add_conn(struct mqtt_conn_mngr *m,
+                   umplg_mngr_t *pm,
+                   const struct json_object *j_conn)
 {
 
     // address
@@ -737,7 +740,7 @@ mqtt_term(struct mqtt_conn_d *conn)
 }
 
 int
-mqtt_mngr_send(struct mqtt_conn_mngr *m,
+mqtt_mngr_send(const struct mqtt_conn_mngr *m,
                struct mqtt_conn_d *c,
                const char *t,
                bool retain,
@@ -870,9 +873,9 @@ process_cfg(umplg_mngr_t *pm, struct mqtt_conn_mngr *mngr)
             struct json_object *j_sub = json_object_object_get(j_conn, "subscriptions");
             if (j_sub != NULL && json_object_is_type(j_sub, json_type_array)) {
                 int sub_l = json_object_array_length(j_sub);
-                for (int i = 0; i < sub_l; ++i) {
+                for (int j = 0; j < sub_l; ++j) {
                     // get array object (v declared in json_object_object_foreach macro)
-                    v = json_object_array_get_idx(j_sub, i);
+                    v = json_object_array_get_idx(j_sub, j);
                     // verify type
                     if (!json_object_is_type(v, json_type_string)) {
                         continue;
@@ -998,13 +1001,13 @@ impl_mqtt_publish(umplg_data_std_t *data)
         return;
     }
     // items elem at index
-    umplg_data_std_items_t *row = utarray_eltptr(data->items, 0);
+    const umplg_data_std_items_t *row = utarray_eltptr(data->items, 0);
     // sanity check (columns)
     if (HASH_COUNT(row->table) < 1) {
         return;
     }
     // get first column
-    umplg_data_std_item_t *column = row->table;
+    const umplg_data_std_item_t *column = row->table;
 
     // get connection
     struct mqtt_conn_d *c = mqtt_mngr_get_conn(mqtt_mngr, column->value);
@@ -1013,10 +1016,10 @@ impl_mqtt_publish(umplg_data_std_t *data)
     }
     // mqtt data
     row = utarray_eltptr(data->items, 2);
-    umplg_data_std_item_t *mqtt_data = row->table;
+    const umplg_data_std_item_t *mqtt_data = row->table;
     // mqtt topic
     row = utarray_eltptr(data->items, 1);
-    umplg_data_std_item_t *mqtt_topic = row->table;
+    const umplg_data_std_item_t *mqtt_topic = row->table;
 
     // do not retain by default
     bool retain = false;
@@ -1046,15 +1049,15 @@ impl_mqtt_bin_upload(umplg_data_std_t *data)
         return;
     }
     // get connection
-    umplg_data_std_items_t *cname = utarray_eltptr(data->items, 0);
+    const umplg_data_std_items_t *cname = utarray_eltptr(data->items, 0);
     // get filesize
-    umplg_data_std_items_t *fsz = utarray_eltptr(data->items, 1);
+    const umplg_data_std_items_t *fsz = utarray_eltptr(data->items, 1);
     // sanity chhecks
     if (HASH_COUNT(fsz->table) < 1 || HASH_COUNT(cname->table) < 1) {
         return;
     }
     // connection
-     struct mqtt_conn_d *c = mqtt_mngr_get_conn(mqtt_mngr, cname->table->value);
+    const struct mqtt_conn_d *c = mqtt_mngr_get_conn(mqtt_mngr, cname->table->value);
     if (c == NULL) {
         return;
     }

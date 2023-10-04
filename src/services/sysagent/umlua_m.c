@@ -105,7 +105,7 @@ mink_lua_cmd_data_sz(void *p)
         return 0;
     }
     // cast (unsafe) to standard plugin data type
-    umplg_data_std_t *d = p;
+    const umplg_data_std_t *d = p;
     // row count
     return utarray_len(d->items);
 }
@@ -123,7 +123,7 @@ mink_lua_cmd_data_row_sz(const int r, void *p)
         return 0;
     }
     // items elem at index
-    umplg_data_std_items_t *items = utarray_eltptr(d->items, r);
+    const umplg_data_std_items_t *items = utarray_eltptr(d->items, r);
     // column count for row at index
     return HASH_COUNT(items->table);
 }

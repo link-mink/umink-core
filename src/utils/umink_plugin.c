@@ -370,7 +370,7 @@ umplg_stdd_free(umplg_data_std_t *data)
 }
 
 int
-umplg_stdd_items_add(umplg_data_std_t *data, umplg_data_std_items_t *items)
+umplg_stdd_items_add(umplg_data_std_t *data, const umplg_data_std_items_t *items)
 {
     // sanity check
     if (data == NULL || items == NULL) {

@@ -446,14 +446,12 @@ th_lua_env(void *arg)
             env->path);
 
     // if not conserving memory, cache scripts
-    if (!env->mem.conserve_mem) {
-        if (lua_env_load_script(env, L) != 0) {
-            umd_log(UMD,
-                    UMD_LLT_ERROR,
-                    "plg_lua: [cannot load Lua environment (%s)]",
-                    env->name);
-            return NULL;
-        }
+    if (!env->mem.conserve_mem && lua_env_load_script(env, L) != 0) {
+        umd_log(UMD,
+                UMD_LLT_ERROR,
+                "plg_lua: [cannot load Lua environment (%s)]",
+                env->name);
+        return NULL;
     }
 
     // run
@@ -871,7 +869,7 @@ lua_sig_hndlr_run(umplg_sh_t *shd,
         // copy lua string to output buffer
         size_t sz = sl + 1;
         char *out = malloc(sz);
-        int r = snprintf(out, sz, "%s", str);
+        r = snprintf(out, sz, "%s", str);
         // error (buffer too small)
         if (r <= 0 || r >= sz) {
             free(out);
@@ -906,13 +904,13 @@ process_cfg(umplg_mngr_t *pm, struct lua_env_mngr *lem)
         return 1;
     }
     // cast (100% json)
-    struct json_object *jcfg = pm->cfg;
+    const struct json_object *jcfg = pm->cfg;
     // find plugin id
     if (!json_object_is_type(jcfg, json_type_object)) {
         return 2;
     }
     // loop keys
-    struct json_object *plg_cfg = NULL;
+    const struct json_object *plg_cfg = NULL;
     json_object_object_foreach(jcfg, k, v)
     {
         if (strcmp(k, "umlua") == 0) {
@@ -935,7 +933,7 @@ process_cfg(umplg_mngr_t *pm, struct lua_env_mngr *lem)
 
     // memory optimizations
     // aggresive lua gc
-    struct json_object *j_agr_gc = json_object_object_get(plg_cfg, "aggressive_gc");
+    const struct json_object *j_agr_gc = json_object_object_get(plg_cfg, "aggressive_gc");
     bool agr_gc = false;
     if (j_agr_gc != NULL) {
         if (!json_object_is_type(j_agr_gc, json_type_boolean)) {
@@ -950,7 +948,7 @@ process_cfg(umplg_mngr_t *pm, struct lua_env_mngr *lem)
     }
 
     // conserve memory (do not cache lua state, re-read scripts per-execution)
-    struct json_object *j_cs_mem = json_object_object_get(plg_cfg, "conserve_memory");
+    const struct json_object *j_cs_mem = json_object_object_get(plg_cfg, "conserve_memory");
     bool cs_mem = false;
     if (j_cs_mem != NULL) {
         if (!json_object_is_type(j_cs_mem, json_type_boolean)) {
@@ -964,7 +962,7 @@ process_cfg(umplg_mngr_t *pm, struct lua_env_mngr *lem)
     }
 
     // get envs
-    struct json_object *jobj = json_object_object_get(plg_cfg, "envs");
+    const struct json_object *jobj = json_object_object_get(plg_cfg, "envs");
     if (jobj != NULL && json_object_is_type(jobj, json_type_array)) {
         // loop an verify envs
         int env_l = json_object_array_length(jobj);
@@ -1124,13 +1122,12 @@ static void
 process_lua_envs(struct lua_env_d *env)
 {
     // check if ENV should auto-start
-    if (env->interval >= 0 && env->active) {
-        if (pthread_create(&env->th, NULL, th_lua_env, env)) {
-            umd_log(UMD,
-                    UMD_LLT_ERROR,
-                    "plg_lua: [cannot start [%s] environment",
-                    env->name);
-        }
+    if (env->interval >= 0 && env->active &&
+        pthread_create(&env->th, NULL, th_lua_env, env)) {
+        umd_log(UMD,
+                UMD_LLT_ERROR,
+                "plg_lua: [cannot start [%s] environment",
+                env->name);
     }
 }
 

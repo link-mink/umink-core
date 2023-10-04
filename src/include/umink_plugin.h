@@ -434,7 +434,8 @@ void umplg_match_signal(umplg_mngr_t *pm,
  *
  * @return      0 for success or error code
  */
-int umplg_stdd_items_add(umplg_data_std_t *data, umplg_data_std_items_t *items);
+int umplg_stdd_items_add(umplg_data_std_t *data,
+                         const umplg_data_std_items_t *items);
 
 /**
  * Add standard item to standard items
