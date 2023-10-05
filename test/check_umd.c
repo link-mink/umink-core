@@ -16,13 +16,39 @@
 #include <cmocka_tests.h>
 #include <stdio.h>
 #include <umdaemon.h>
+#include <signal.h>
+#include <unistd.h>
+
+// dummy struct for state passing
+typedef struct {
+    umdaemon_t *umd;
+} test_t;
+
+static int
+umplg_run_init(void **state)
+{
+    test_t *data = malloc(sizeof(test_t));
+    data->umd = umd_create("test_id", "test_type");
+    *state = data;
+    return 0;
+}
+
+static int
+umplg_run_dtor(void **state)
+{
+    test_t *data = *state;
+    // free
+    umd_destroy(data->umd);
+    free(data);
+    return 0;
+}
 
 static void
-umd_test(void **state)
+umd_test_01(void **state)
 {
-    // create daemon
-    umdaemon_t *umd = umd_create("test_id", "test_type");
-    assert_non_null(umd);
+    // get data
+    test_t *data = *state;
+    umdaemon_t *umd = data->umd;
 
     // check id and type
     assert_string_equal(umd->id, "test_id");
@@ -36,15 +62,50 @@ umd_test(void **state)
     // chage id (failure)
     umd_set_id(umd, "new_id000000000000000000000000");
     assert_string_equal(umd->id, "new_id");
+}
 
-    // free
-    umd_destroy(umd);
+static void
+umd_test_02(void **state)
+{
+    // get data
+    test_t *data = *state;
+    umdaemon_t *umd = data->umd;
+
+    // set log level
+    umd_set_log_level(umd, UMD_LLT_DEBUG);
+    assert_int_equal(umd->log_level, UMD_LLT_DEBUG);
+}
+
+static void *
+kill_thread(void *args)
+{
+    sleep(1);
+    UM_ATOMIC_COMP_SWAP(&UMD->is_terminated, 0, 1);
+    return NULL;
+}
+
+static void
+umd_test_03(void **state)
+{
+    // get data
+    test_t *data = *state;
+    umdaemon_t *umd = data->umd;
+
+    // new thread
+    pthread_t th;
+    pthread_create(&th, NULL, &kill_thread, NULL);
+
+    // start test
+    umd_start(umd);
+    umd_loop(umd);
 }
 
 int
 main(int argc, char **argv)
 {
-    const struct CMUnitTest tests[] = { cmocka_unit_test(umd_test) };
+    const struct CMUnitTest tests[] = { cmocka_unit_test(umd_test_01),
+                                        cmocka_unit_test(umd_test_02),
+                                        cmocka_unit_test(umd_test_03) };
 
-    return cmocka_run_group_tests(tests, NULL, NULL);
+    return cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
 }
