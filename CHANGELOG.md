@@ -1,4 +1,17 @@
-## [v1.0.1](https://github.com/link-mink/umink-core/compare/v1.0.0..v1.0.1) - 2023-10-05
+## [v1.0.2](https://github.com/link-mink/umink-core/compare/v1.0.1..v1.0.2) - 2023-10-06
+#### Bug Fixes
+- **(tests)** define src and tests sonar dirs - ([f48cbb9](https://github.com/link-mink/umink-core/commit/f48cbb93a624352ecf4efb19c1d407f5fc6ac6ba)) - [@dfranusic](https://github.com/dfranusic)
+- **(tests)** ignore duplications in unit tests - ([d3888b6](https://github.com/link-mink/umink-core/commit/d3888b6b80885edd5f2c4cd591dbef0fc5ae2fd7)) - [@dfranusic](https://github.com/dfranusic)
+- **(tests)** do not ignore umink_plugin - ([d81edf6](https://github.com/link-mink/umink-core/commit/d81edf600118bd4a484bcd4dc898fd00b4c89f8b)) - [@dfranusic](https://github.com/dfranusic)
+- **(umlua)** fix shutdown SIGSEGV - ([41658fe](https://github.com/link-mink/umink-core/commit/41658fe4a157cac6f5857b11a4def7074e9da6a1)) - [@dfranusic](https://github.com/dfranusic)
+#### Features
+- **(tests)** add umlua sub-module test - ([ad33671](https://github.com/link-mink/umink-core/commit/ad33671fe1cd6e39a6153bb87b81e51582b1ffca)) - [@dfranusic](https://github.com/dfranusic)
+#### Miscellaneous Chores
+- **(version)** v1.0.2 - ([4627a42](https://github.com/link-mink/umink-core/commit/4627a425fe3f18d951e65a9ec726453242d3a210)) - [@dfranusic](https://github.com/dfranusic)
+
+- - -
+
+## [v1.0.1](https://github.com/link-mink/umink-core/compare/v1.0.0..v1.0.1) - 2023-10-06
 #### Bug Fixes
 - **(build)** update github workflows - ([9e7a74e](https://github.com/link-mink/umink-core/commit/9e7a74e239949d42fe418f6b1a624121623e51d5)) - [@dfranusic](https://github.com/dfranusic)
 - **(build)** update cog configuration - ([822e8d6](https://github.com/link-mink/umink-core/commit/822e8d615bbf3ae5c70da8fe5bcb2dc58c5d66c3)) - [@dfranusic](https://github.com/dfranusic)
@@ -62,7 +75,7 @@
 - Add COAP and perf counters - ([6f13fac](https://github.com/link-mink/umink-core/commit/6f13faca68b9a862bbfa201475595e6270661eac)) - [@dfranusic](https://github.com/dfranusic)
 - Add extra CAS op in atomics - ([3a0f438](https://github.com/link-mink/umink-core/commit/3a0f438f0bebbeaffbcace904d18229ac63d6f74)) - [@dfranusic](https://github.com/dfranusic)
 #### Miscellaneous Chores
-- **(version)** v1.0.1 - ([4cfaf39](https://github.com/link-mink/umink-core/commit/4cfaf391ded22aa64396f0e73c03683dff5f42a1)) - [@dfranusic](https://github.com/dfranusic)
+- **(version)** v1.0.1 - ([8e6de26](https://github.com/link-mink/umink-core/commit/8e6de26ad196bcc2f968c06484adc9d3727c48bd)) - [@dfranusic](https://github.com/dfranusic)
 - add gcov data to gitignore - ([4a6d127](https://github.com/link-mink/umink-core/commit/4a6d1274fc639fdb35831d0a4898132ba1937013)) - [@dfranusic](https://github.com/dfranusic)
 - add sonarcloud badge - ([f6795d6](https://github.com/link-mink/umink-core/commit/f6795d63d4e6d43fa118045e2953ed28d23afe09)) - [@dfranusic](https://github.com/dfranusic)
 - update README - ([ea12aa5](https://github.com/link-mink/umink-core/commit/ea12aa5fbe470b2875b07ab4d7e8d381f7a26197)) - [@dfranusic](https://github.com/dfranusic)
@@ -70,7 +83,7 @@
 
 - - -
 
-## [v1.0.0](https://github.com/link-mink/umink-core/compare/09fc3796a6b10118c04f52f82a2658d4810cf0b5..v1.0.0) - 2023-10-05
+## [v1.0.0](https://github.com/link-mink/umink-core/compare/09fc3796a6b10118c04f52f82a2658d4810cf0b5..v1.0.0) - 2023-10-06
 #### Bug Fixes
 - **(lua)** Do not register a faulty signal handler - ([8365e03](https://github.com/link-mink/umink-core/commit/8365e032f19bfead2cdb3aff5d98a2963b604cee)) - [@dfranusic](https://github.com/dfranusic)
 - **(lua)** allocate output buffer in SIG handler - ([02c6022](https://github.com/link-mink/umink-core/commit/02c602294aacffe1f127675271ec32ebaf127e8d)) - [@dfranusic](https://github.com/dfranusic)
