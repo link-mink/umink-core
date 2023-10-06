@@ -21,9 +21,11 @@ COMMON_INCLUDES = -I. -Isrc/include
 
 # asan flags
 ASAN_FLAGS = -fsanitize=address \
-	     -fno-omit-frame-pointer \
-	     -fprofile-abs-path \
-	     --coverage
+             -fno-omit-frame-pointer \
+             -fprofile-abs-path \
+             -fprofile-arcs \
+             -ftest-coverage \
+             --coverage
 
 # umINK directories
 confdir = $(sysconfdir)/umink
@@ -159,7 +161,8 @@ check_umlua_LDADD = -lcmocka \
 
 # umplg manager tester
 check_umplg_plugin_01_la_SOURCES = test/check_umplg_plugin_01.c \
-                                   src/umd/umdaemon.c
+                                   src/umd/umdaemon.c \
+                                   src/utils/umink_plugin.c
 check_umplg_plugin_01_la_CFLAGS = ${COMMON_INCLUDES} \
                                   ${ASAN_FLAGS} \
                                   -DLUA_COMPAT_ALL \
@@ -168,7 +171,6 @@ check_umplg_plugin_01_la_CFLAGS = ${COMMON_INCLUDES} \
                                   -DLUA_COMPAT_5_3 \
                                   ${LUA_CFLAGS}
 check_umplg_plugin_01_la_LIBADD = -lcmocka \
-				  libumplg.la \
                                   ${LUA_LIBS}
 check_umplg_plugin_01_la_LDFLAGS = -version-info 1:0:0 \
                                    -shared \
@@ -177,7 +179,8 @@ check_umplg_plugin_01_la_LDFLAGS = -version-info 1:0:0 \
                                    -rpath /tmp
 
 check_umplg_plugin_02_la_SOURCES = test/check_umplg_plugin_01.c \
-                                   src/umd/umdaemon.c
+                                   src/umd/umdaemon.c \
+                                   src/utils/umink_plugin.c
 check_umplg_plugin_02_la_CFLAGS = ${COMMON_INCLUDES} \
                                   ${ASAN_FLAGS} \
                                   -DLUA_COMPAT_ALL \
@@ -187,7 +190,6 @@ check_umplg_plugin_02_la_CFLAGS = ${COMMON_INCLUDES} \
                                   ${LUA_CFLAGS} \
                                   -DFAIL_TESTS
 check_umplg_plugin_02_la_LIBADD = -lcmocka \
-				  libumplg.la \
                                   ${LUA_LIBS}
 check_umplg_plugin_02_la_LDFLAGS = -version-info 1:0:0 \
                                    -shared \

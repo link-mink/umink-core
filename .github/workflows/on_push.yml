@@ -36,7 +36,8 @@ jobs:
           liblua5.3-dev \
           libjson-c-dev \
           libcmocka-dev \
-          libasan5 && \
+          libasan5 \
+          gcovr && \
           sudo ln -s /usr/lib/x86_64-linux-gnu/pkgconfig/lua-5.3.pc \
           /usr/lib/x86_64-linux-gnu/pkgconfig/lua.pc
       - name: Install sonar-scanner and build-wrapper
@@ -52,7 +53,7 @@ jobs:
         run: |
           mkdir coverage-dir
           cd coverage-dir
-          find .. -name '*.o' | xargs gcov --preserve-paths
+          gcovr --sonarqube coverage.xml -r ..
           cd ..
       - name: Run sonar-scanner
         env:
@@ -60,4 +61,4 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN  }}
         run: |
           sonar-scanner --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR  }}" \
-                        --define sonar.cfamily.gcov.reportsPath="coverage-dir"
+                        --define sonar.coverageReportPaths=coverage-dir/coverage.xml
