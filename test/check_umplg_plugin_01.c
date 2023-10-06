@@ -8,6 +8,7 @@
  *
  */
 
+#include <config.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -16,6 +17,10 @@
 #include <cmocka_tests.h>
 #include <umink_pkg_config.h>
 #include <umink_plugin.h>
+#include <luaconf.h>
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
 
 /*************/
 /* Plugin ID */
@@ -44,6 +49,65 @@ terminate(umplg_mngr_t *pm, umplgd_t *pd, int phase)
     return 0;
 }
 
+static int
+mink_lua_test_method_01(lua_State *L)
+{
+    lua_pushstring(L, "test_method_return_string_01");
+    return 1;
+}
+
+static int
+mink_lua_test_method_02(lua_State *L)
+{
+    if (lua_gettop(L) < 1) {
+        return 0;
+    }
+    const char *arg = lua_tostring(L, 1);
+    lua_pushstring(L, arg);
+    return 1;
+}
+
+
+static const struct luaL_Reg test_lualib[] = {
+    { "test_method_01", &mink_lua_test_method_01 },
+    { "test_method_02", &mink_lua_test_method_02 },
+    { NULL, NULL }
+};
+
+static void
+init_test_lua_module(lua_State *L)
+{
+    luaL_newlib(L, test_lualib);
+}
+
+/********************************************/
+/* test module create (signal init handler) */
+/********************************************/
+static int
+test_module_sig_run(umplg_sh_t *shd,
+                    umplg_data_std_t *d_in,
+                    char **d_out,
+                    size_t *out_sz,
+                    void *args)
+{
+
+    // get lua state (assume args != NULL)
+    lua_State *L = args;
+    // get M module from globals
+    lua_getglobal(L, "M");
+    // add test sub-module
+    lua_pushstring(L, "test");
+    init_test_lua_module(L);
+    // add test module table to M table
+    lua_settable(L, -3);
+    // remove M table from stack
+    lua_pop(L, 1);
+
+    // success
+    return 0;
+}
+
+
 /****************/
 /* init handler */
 /****************/
@@ -54,6 +118,16 @@ int
 #endif
 init(umplg_mngr_t *pm, umplgd_t *pd)
 {
+    // create signal handler for creating MQTT module
+    // when per-thread Lua state creates the M module
+    umplg_sh_t *sh = calloc(1, sizeof(umplg_sh_t));
+    sh->id = strdup("@init_lua_sub_module:test");
+    sh->run = &test_module_sig_run;
+    sh->running = false;
+
+    // register signal
+    umplg_reg_signal(pm, sh);
+
     return 0;
 }
 

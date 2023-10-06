@@ -162,8 +162,14 @@ check_umplg_plugin_01_la_SOURCES = test/check_umplg_plugin_01.c \
                                    src/utils/umink_plugin.c \
                                    src/umd/umdaemon.c
 check_umplg_plugin_01_la_CFLAGS = ${COMMON_INCLUDES} \
-                                  ${ASAN_FLAGS}
-check_umplg_plugin_01_la_LIBADD = -lcmocka
+                                  ${ASAN_FLAGS} \
+                                  -DLUA_COMPAT_ALL \
+                                  -DLUA_COMPAT_5_1 \
+                                  -DLUA_COMPAT_5_2 \
+                                  -DLUA_COMPAT_5_3 \
+                                  ${LUA_CFLAGS}
+check_umplg_plugin_01_la_LIBADD = -lcmocka \
+                                  ${LUA_LIBS}
 check_umplg_plugin_01_la_LDFLAGS = -version-info 1:0:0 \
                                    -shared \
                                    -module \
@@ -175,7 +181,14 @@ check_umplg_plugin_02_la_SOURCES = test/check_umplg_plugin_01.c \
                                    src/umd/umdaemon.c
 check_umplg_plugin_02_la_CFLAGS = ${COMMON_INCLUDES} \
                                   ${ASAN_FLAGS} \
+                                  -DLUA_COMPAT_ALL \
+                                  -DLUA_COMPAT_5_1 \
+                                  -DLUA_COMPAT_5_2 \
+                                  -DLUA_COMPAT_5_3 \
+                                  ${LUA_CFLAGS} \
                                   -DFAIL_TESTS
+check_umplg_plugin_02_la_LIBADD = -lcmocka \
+                                  ${LUA_LIBS}
 check_umplg_plugin_02_la_LDFLAGS = -version-info 1:0:0 \
                                    -shared \
                                    -module \
