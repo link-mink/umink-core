@@ -8,6 +8,7 @@
  *
  */
 
+#include <umink_pkg_config.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -25,6 +26,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <cmocka_tests.h>
+#include <umlua.h>
 
 // fwd declarations
 void umlua_shutdown();
@@ -125,6 +127,61 @@ umlua_test_signal(void **state)
     int r = umplg_proc_signal(m, "TEST_EVENT_XX", NULL, &b, &b_sz, 0, NULL);
     assert_int_equal(r, 1);
     assert_null(b);
+}
+
+// test lua env manager
+static struct lua_env_mngr *tmp_lenvm;
+struct lua_env_mngr *lenvm_new();
+void lenvm_free(struct lua_env_mngr *m);
+struct lua_env_d *lenvm_get_envd(struct lua_env_mngr *lem, const char *n);
+struct lua_env_d *lenvm_new_envd(struct lua_env_mngr *lem,
+                                 struct lua_env_d *env);
+bool lenvm_envd_exists(struct lua_env_mngr *lem, const char *n);
+void lenvm_process_envs(struct lua_env_mngr *lem,
+                        void (*f)(struct lua_env_d *env));
+struct lua_env_d *
+lenvm_del_envd(struct lua_env_mngr *lem, const char *n, bool th_safe);
+
+static void
+shutdown_envs(struct lua_env_d *env)
+{
+    // cleanup
+    lenvm_del_envd(tmp_lenvm, env->name, false);
+    free(env->name);
+    free(env->path);
+    free(env->sgnl_perf);
+    free(env);
+}
+
+static void
+umlua_test_lenvm(void **state)
+{
+    // new env mngr
+    tmp_lenvm = lenvm_new();
+    assert_non_null(tmp_lenvm);
+
+    // new dummy env
+    struct lua_env_d *env = calloc(1, sizeof(struct lua_env_d));
+    env->name = strdup("test_env_id");
+    lenvm_new_envd(tmp_lenvm, env);
+
+    // exists
+    bool found = lenvm_envd_exists(tmp_lenvm, "test_env_id");
+    assert_int_equal(found, 1);
+
+    // get
+    env = lenvm_get_envd(tmp_lenvm, "test_env_id");
+    assert_non_null(env);
+    env = lenvm_get_envd(tmp_lenvm, "test_env_id_XX");
+    assert_null(env);
+
+    // doesn't exist
+    found = lenvm_envd_exists(tmp_lenvm, "test_env_id_XX");
+    assert_int_equal(found, 0);
+
+    // free
+    lenvm_process_envs(tmp_lenvm, &shutdown_envs);
+    lenvm_free(tmp_lenvm);
 }
 
 static void
@@ -556,6 +613,7 @@ main(int argc, char **argv)
 {
     const struct CMUnitTest tests[] = { cmocka_unit_test(umlua_test_env_01),
                                         cmocka_unit_test(umlua_test_signal),
+                                        cmocka_unit_test(umlua_test_lenvm),
                                         cmocka_unit_test(umlua_test_user_privs),
                                         cmocka_unit_test(umlua_test_01),
                                         cmocka_unit_test(umlua_test_02),

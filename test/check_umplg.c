@@ -56,6 +56,7 @@ static int
 umplg_run_dtor(void **state)
 {
     test_t *data = *state;
+    umplg_terminate_all(data->m, 0);
     umplg_free_mngr(data->m);
     umd_destroy(data->umd);
     free(data);
