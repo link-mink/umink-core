@@ -234,7 +234,9 @@ umplg_free_mngr(umplg_mngr_t *pm)
             c_sh->term(c_sh, 1);
         }
         free(c_sh->id);
-        utarray_free(c_sh->args);
+        if (c_sh->args != NULL) {
+            utarray_free(c_sh->args);
+        }
         free(c_sh);
     }
 
