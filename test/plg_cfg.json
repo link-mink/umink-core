@@ -15,6 +15,16 @@
         ]
       },
       {
+        "name": "TEST_EVENT_01_ADMIN",
+        "auto_start": false,
+        "interval": 0,
+        "min_auth": 1,
+        "path": "test/test_event_01.lua",
+        "events": [
+          "TEST_EVENT_01_ADMIN"
+        ]
+      },
+      {
         "name": "TEST_EVENT_02",
         "auto_start": false,
         "interval": 0,
@@ -48,6 +58,15 @@
         "path": "test/test_event_05.lua",
         "events": [
           "TEST_EVENT_05"
+        ]
+      },
+      {
+        "name": "TEST_EVENT_05_ADMIN",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/test_event_05a.lua",
+        "events": [
+          "TEST_EVENT_05_ADMIN"
         ]
       },
       {

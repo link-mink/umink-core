@@ -26,6 +26,7 @@ umc_create_free_test(void **state)
     assert_non_null(umc);
 
     // free
+    umc_free_ctx(NULL);
     umc_free_ctx(umc);
 }
 
@@ -36,11 +37,18 @@ umc_create_cntr_test(void **state)
     umc_ctx_t *umc = umc_new_ctx();
     assert_non_null(umc);
 
+    // NULL check
+    umc_t *c = umc_new_counter(NULL, "test_inc_counter", UMCT_INCREMENTAL);
+    assert_null(c);
+
     // new incremental counter
-    umc_t *c = umc_new_counter(umc, "test_inc_counter", UMCT_INCREMENTAL);
+    c = umc_new_counter(umc, "test_inc_counter", UMCT_INCREMENTAL);
     assert_non_null(c);
     assert_string_equal(c->idp, "test_inc_counter");
     assert_int_equal(c->type, UMCT_INCREMENTAL);
+    // NULL check
+    c = umc_new_counter(NULL, "test_inc_counter", UMCT_INCREMENTAL);
+    assert_null(c);
 
     // new gauge counter
     umc_t *c2 = umc_new_counter(umc, "test_gauge_counter", UMCT_GAUGE);
@@ -73,6 +81,9 @@ umc_inc_cntr_test(void **state)
     umc_inc(c, 10);
     assert_int_equal(c->values.last.value, 10);
     assert_int_equal(c->values.max, 10);
+    // NULL check
+    umc_inc(NULL, 1);
+    assert_int_equal(c->values.max, 10);
 
     // check get/set/inc for INCREMENTAL
     // expected failure
@@ -82,6 +93,9 @@ umc_inc_cntr_test(void **state)
     c2 = umc_get_inc(umc, "test_inc_counter", 10, false);
 
     // check umc_set
+    // NULL check
+    c2 = umc_get_set(NULL, "test_inc_counter", 30, false);
+    assert_null(c2);
     // expected failure
     c2 = umc_get_set(umc, "test_inc_counter_unknown", 30, false);
     assert_null(c2);

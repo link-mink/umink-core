@@ -33,6 +33,7 @@ umdb_create_free_test(void **state)
     assert_non_null(m->db);
 
     // free
+    umdb_mngr_free(NULL);
     umdb_mngr_free(m);
 }
 
@@ -49,6 +50,10 @@ umdb_uauth_test(void **state)
     assert_int_equal(r, 0);
     assert_int_equal(res.auth, 0);
     assert_int_equal(res.id, 1);
+
+    // NULL check
+    r  = umdb_mngr_uauth(NULL, &res, "admin", "Apassword");
+    assert_int_equal(r, 1);
 
     // missing user
     memset(&res, 0, sizeof(umdb_uauth_d_t));
@@ -81,6 +86,9 @@ umdb_uget_test(void **state)
     assert_int_equal(r, 0);
     assert_int_equal(res.id, 1);
     assert_string_equal(res.usr, "admin");
+    // NULL check
+    r = umdb_mngr_uget(NULL, &res, "admin");
+    assert_int_equal(r, 1);
 
     // try missing user
     memset(&res, 0, sizeof(umdb_uauth_d_t));
@@ -106,10 +114,16 @@ umdb_get_set_test(void **state)
     // init store
     int r = umdb_mngr_store_init(m, "user_test_store");
     assert_int_equal(r, 0);
+    // NULL check
+    r = umdb_mngr_store_init(NULL, "user_test_store");
+    assert_int_equal(r, 1);
 
     // set
     r = umdb_mngr_store_set(m, "user_test_store", "test_key", "test_value");
     assert_int_equal(r, 0);
+    // NULL check
+    r = umdb_mngr_store_set(NULL, "user_test_store", "test_key", "test_value");
+    assert_int_equal(r, 1);
 
     // get (existing)
     char *res = NULL;
@@ -119,6 +133,9 @@ umdb_get_set_test(void **state)
     assert_int_equal(out_sz, 11);
     assert_string_equal("test_value", res);
     free(res);
+    // NULL check
+    r = umdb_mngr_store_get(NULL, "user_test_store", "test_key", &res, &out_sz);
+    assert_int_equal(r, 1);
 
     // get (missing key)
     res = NULL;

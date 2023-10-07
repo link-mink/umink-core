@@ -127,6 +127,10 @@ umlua_test_signal(void **state)
     int r = umplg_proc_signal(m, "TEST_EVENT_XX", NULL, &b, &b_sz, 0, NULL);
     assert_int_equal(r, 1);
     assert_null(b);
+    // NULL check
+    r = umplg_proc_signal(m, NULL, NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, UMPLG_RES_UNKNOWN_SIGNAL);
+    assert_null(b);
 }
 
 // test lua env manager
@@ -217,7 +221,7 @@ umlua_test_user_privs(void **state)
 
     // run signal again (expected failure)
     r = umplg_proc_signal(m, "TEST_EVENT_01", NULL, &b, &b_sz, 0, NULL);
-    assert_int_equal(r, 2);
+    assert_int_equal(r, UMPLG_RES_AUTH_ERROR);
     assert_null(b);
 
     // revert min user role level to 0
@@ -364,7 +368,9 @@ umlua_test_env_01(void **state)
     sleep(2);
 
     // get custom counter
-    umc_t *c = umc_get(data->umd->perf, "test_env_counter", true);
+    umc_t *c = umc_get(NULL, "test_env_counter", true);
+    assert_null(c);
+    c = umc_get(data->umd->perf, "test_env_counter", true);
     assert_non_null(c);
     assert_int_equal(c->values.last.value, 4);
 
@@ -438,6 +444,26 @@ umlua_test_06(void **state)
 
     // run signal
     int r = umplg_proc_signal(m, "TEST_EVENT_05", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    assert_string_equal(b, "test_data");
+    free(b);
+}
+
+//  check signal call from another signal (admin)
+static void
+umlua_test_06a(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_EVENT_05_ADMIN", NULL, &b, &b_sz, 0, NULL);
     assert_int_equal(r, 0);
     assert_non_null(b);
     assert_string_equal(b, "test_data");
@@ -621,6 +647,7 @@ main(int argc, char **argv)
                                         cmocka_unit_test(umlua_test_04),
                                         cmocka_unit_test(umlua_test_05),
                                         cmocka_unit_test(umlua_test_06),
+                                        cmocka_unit_test(umlua_test_06a),
                                         cmocka_unit_test(umlua_test_07),
                                         cmocka_unit_test(umlua_test_08),
                                         cmocka_unit_test(umlua_test_09),
