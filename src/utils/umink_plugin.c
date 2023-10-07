@@ -153,17 +153,20 @@ umplg_proc_signal(umplg_mngr_t *pm,
                   int usr_flags,
                   void *args)
 {
-
+    // signal missing
+    if (s == NULL) {
+        return UMPLG_RES_UNKNOWN_SIGNAL;
+    }
     // single handler descriptor
     umplg_sh_t *tmp_shd = NULL;
     // find signal
     HASH_FIND_STR(pm->signals, s, tmp_shd);
     if (tmp_shd == NULL) {
-        return 1;
+        return UMPLG_RES_UNKNOWN_SIGNAL;
     }
     // check min auth level
-    if (usr_flags < tmp_shd->min_auth_lvl){
-        return 2;
+    if (usr_flags < tmp_shd->min_auth_lvl) {
+        return UMPLG_RES_AUTH_ERROR;
     }
 
     // run
