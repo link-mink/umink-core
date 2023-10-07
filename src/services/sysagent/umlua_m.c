@@ -405,7 +405,11 @@ mink_lua_do_cmd_call(lua_State *L)
 int
 mink_lua_do_signal(lua_State *L)
 {
-
+    // signal name required
+    if (lua_gettop(L) < 1) {
+        lua_pushstring(L, "");
+        lua_pushnumber(L, UMPLG_RES_UNKNOWN_SIGNAL);
+    }
     // signal data/signal name
     const char *d = NULL;
     const char *s = NULL;
