@@ -27,6 +27,8 @@
 #include <math.h>
 #include <cmocka_tests.h>
 #include <umlua.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 // fwd declarations
 void umlua_shutdown();
@@ -476,9 +478,10 @@ umlua_test_06a(void **state)
     // output buffer
     char *b = NULL;
     size_t b_sz = 0;
+    int r;
 
     // run signal
-    int r = umplg_proc_signal(m, "TEST_EVENT_05_ADMIN", NULL, &b, &b_sz, 0, NULL);
+    r = umplg_proc_signal(m, "TEST_EVENT_05_ADMIN", NULL, &b, &b_sz, 0, NULL);
     assert_int_equal(r, 0);
     assert_non_null(b);
     assert_string_equal(b, "test_data");
@@ -521,8 +524,7 @@ umlua_test_08(void **state)
     umplg_data_std_t d = { .items = NULL };
     umplg_stdd_init(&d);
     umplg_data_std_items_t items = { .table = NULL };
-    umplg_data_std_item_t item_test = { .name = "",
-                                        .value = "test_arg_data" };
+    umplg_data_std_item_t item_test = { .name = "", .value = "test_arg_data" };
     umplg_stdd_item_add(&items, &item_test);
     umplg_stdd_items_add(&d, &items);
 
@@ -552,8 +554,7 @@ umlua_test_09(void **state)
     umplg_data_std_t d = { .items = NULL };
     umplg_stdd_init(&d);
     umplg_data_std_items_t items = { .table = NULL };
-    umplg_data_std_item_t item_test = { .name = "",
-                                        .value = "set" };
+    umplg_data_std_item_t item_test = { .name = "", .value = "set" };
     umplg_stdd_item_add(&items, &item_test);
     umplg_stdd_items_add(&d, &items);
 
@@ -600,8 +601,7 @@ umlua_test_10(void **state)
     umplg_data_std_t d = { .items = NULL };
     umplg_stdd_init(&d);
     umplg_data_std_items_t items = { .table = NULL };
-    umplg_data_std_item_t item_test = { .name = "",
-                                        .value = "set" };
+    umplg_data_std_item_t item_test = { .name = "", .value = "set" };
     umplg_stdd_item_add(&items, &item_test);
     umplg_stdd_items_add(&d, &items);
 
@@ -632,8 +632,7 @@ umlua_test_11(void **state)
     umplg_data_std_t d = { .items = NULL };
     umplg_stdd_init(&d);
     umplg_data_std_items_t items = { .table = NULL };
-    umplg_data_std_item_t item_test = { .name = "",
-                                        .value = "set" };
+    umplg_data_std_item_t item_test = { .name = "", .value = "set" };
     umplg_stdd_item_add(&items, &item_test);
     umplg_stdd_items_add(&d, &items);
 
@@ -648,6 +647,48 @@ umlua_test_11(void **state)
     umplg_stdd_free(&d);
 }
 
+//  check domain socket cli
+static void
+umlua_test_12(void **state)
+{
+    const char *socket_path = "/tmp/umink.sock";
+    int sock = 0;
+    int data_len = 0;
+    struct sockaddr_un remote;
+    char recv_msg[128];
+    char send_msg[128];
+
+    memset(recv_msg, 0, sizeof(recv_msg));
+    memset(send_msg, 0, sizeof(send_msg));
+
+    // create socket
+    if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+        fail();
+    }
+
+    // connect
+    remote.sun_family = AF_UNIX;
+    strcpy(remote.sun_path, socket_path);
+    data_len = strlen(remote.sun_path) + sizeof(remote.sun_family);
+
+    if (connect(sock, (struct sockaddr *)&remote, data_len) == -1) {
+        fail();
+    }
+
+    // send msg
+    strcpy(send_msg, "return M.signal(\"TEST_EVENT_01\")");
+
+    if (send(sock, send_msg, strlen(send_msg) * sizeof(char), 0) == -1) {
+        printf("Client: Error on send() call \n");
+        fail();
+    }
+
+    // receive
+    data_len = recv(sock, recv_msg, sizeof(recv_msg), 0);
+    assert_int_equal(data_len, 10);
+    assert_string_equal(recv_msg, "test_data");
+    close(sock);
+}
 
 int
 main(int argc, char **argv)
@@ -667,7 +708,8 @@ main(int argc, char **argv)
                                         cmocka_unit_test(umlua_test_08),
                                         cmocka_unit_test(umlua_test_09),
                                         cmocka_unit_test(umlua_test_10),
-                                        cmocka_unit_test(umlua_test_11) };
+                                        cmocka_unit_test(umlua_test_11),
+                                        cmocka_unit_test(umlua_test_12) };
 
     // conserve memory
     strcpy(plg_cfg_fname, "test/plg_cfg.json");
