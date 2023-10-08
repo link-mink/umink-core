@@ -39,6 +39,14 @@ umplg_load_test(void **state)
     // load dummy plugin (failure due to missing init)
     umplgd_t *p2 = umplg_load(m, ".libs/check_umplg_plugin_02.so");
     assert_null(p2);
+
+    // load dummy plugin (failure due to missing file)
+    umplgd_t *p3 = umplg_load(m, ".libs/check_umplg_plugin_02XX.so");
+    assert_null(p3);
+
+    // reload already loaded
+    umplgd_t *p4 = umplg_load(m, ".libs/check_umplg_plugin_01.so");
+    assert_null(p4);
 }
 
 static int

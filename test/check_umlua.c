@@ -32,6 +32,7 @@
 void umlua_shutdown();
 int umlua_init(umplg_mngr_t *pm);
 void umlua_start(umplg_mngr_t *pm);
+static char plg_cfg_fname[128];
 
 // dummy struct for state passing
 typedef struct {
@@ -43,7 +44,7 @@ static void
 load_cfg(umplg_mngr_t *m)
 {
     // load plugins configuration
-    FILE *f = fopen("test/plg_cfg.json", "r");
+    FILE *f = fopen(plg_cfg_fname, "r");
     assert_non_null(f);
     if (fseek(f, 0, SEEK_END) < 0) {
         fclose(f);
@@ -167,7 +168,15 @@ umlua_test_lenvm(void **state)
     // new dummy env
     struct lua_env_d *env = calloc(1, sizeof(struct lua_env_d));
     env->name = strdup("test_env_id");
-    lenvm_new_envd(tmp_lenvm, env);
+    struct lua_env_d *env_tmp = lenvm_new_envd(tmp_lenvm, env);
+    assert_ptr_equal(env, env_tmp);
+    // add existing id, expect previous one to be returned
+    struct lua_env_d *env_tmp_02 = calloc(1, sizeof(struct lua_env_d));
+    env_tmp_02->name = strdup("test_env_id");
+    env_tmp = lenvm_new_envd(tmp_lenvm, env);
+    assert_ptr_equal(env, env_tmp);
+    free(env_tmp_02->name);
+    free(env_tmp_02);
 
     // exists
     bool found = lenvm_envd_exists(tmp_lenvm, "test_env_id");
@@ -182,6 +191,12 @@ umlua_test_lenvm(void **state)
     // doesn't exist
     found = lenvm_envd_exists(tmp_lenvm, "test_env_id_XX");
     assert_int_equal(found, 0);
+
+    // del missing env
+    env = lenvm_del_envd(tmp_lenvm, "test_env_id_XX", false);
+    assert_null(env);
+    env = lenvm_del_envd(tmp_lenvm, "test_env_id_XX", true);
+    assert_null(env);
 
     // free
     lenvm_process_envs(tmp_lenvm, &shutdown_envs);
@@ -654,5 +669,14 @@ main(int argc, char **argv)
                                         cmocka_unit_test(umlua_test_10),
                                         cmocka_unit_test(umlua_test_11) };
 
-    return cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
+    // conserve memory
+    strcpy(plg_cfg_fname, "test/plg_cfg.json");
+    int r = cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
+    if (r == 0) {
+        // do not conserve memory
+        strcpy(plg_cfg_fname, "test/plg_cfg_ncs.json");
+        r += cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
+    }
+
+    return r;
 }
