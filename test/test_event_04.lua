@@ -1,6 +1,10 @@
 -- incremental
 M.perf_inc("test_05_c1")
 M.perf_inc("test_05_c1")
+-- try missing counter
+M.perf_inc()
+M.perf_inc(1000)
+M.perf_inc(false)
 -- gauge
 M.perf_set("test_05_c2", 999)
 M.perf_set("test_05_c2", 998)
