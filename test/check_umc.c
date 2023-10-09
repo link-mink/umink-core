@@ -90,7 +90,12 @@ umc_inc_cntr_test(void **state)
     umc_t *c2 = umc_get_inc(umc, "test_inc_counter_unknown", 10, false);
     assert_null(c2);
     // expected success
-    c2 = umc_get_inc(umc, "test_inc_counter", 10, false);
+    c2 = umc_get_inc(umc, "test_inc_counter", 5, false);
+    assert_non_null(c2);
+    // w/locks
+    c2 = umc_get_inc(umc, "test_inc_counter", 5, true);
+    assert_non_null(c2);
+    assert_int_equal(c->values.last.value, 20);
 
     // check umc_set
     // NULL check
@@ -101,6 +106,8 @@ umc_inc_cntr_test(void **state)
     assert_null(c2);
     // expected success
     c2 = umc_get_set(umc, "test_inc_counter", 30, false);
+    // w/locks
+    c2 = umc_get_set(umc, "test_inc_counter", 30, true);
 
     // set to lower value (not allowed for INCREMENTAL)
     umc_set(c, 5);
