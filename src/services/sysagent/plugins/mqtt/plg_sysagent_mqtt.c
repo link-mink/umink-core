@@ -183,6 +183,9 @@ mqtt_proc_thread(void *args)
             size_t b_sz = 0;
             // process signal
             umplg_proc_signal(conn->pm, SIG_MQTT_RX, data, &b, &b_sz, 0, NULL);
+            if (b != NULL) {
+                free(b);
+            }
             // cleanup
             umplg_stdd_free(data);
             free(data);
