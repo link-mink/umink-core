@@ -415,6 +415,38 @@ umlua_test_env_01(void **state)
     }
 }
 
+//  check failed env
+static void
+umlua_test_load_err_01(void **state)
+{
+    sleep(2);
+    // get custom counter
+    umc_t *c = umc_get(NULL, "test_env_counter", true);
+    assert_null(c);
+}
+
+//  check failed signal
+static void
+umlua_test_load_err_02(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_EVENT_02", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    assert_string_equal(b,
+                        "[string \"rsdfeturn \"test_data\"...\"]:1: attempt to "
+                        "call a nil value (global 'rsdfeturn')");
+    free(b);
+}
+
 //  check counters again (check_umc), this time from lua script
 static void
 umlua_test_05(void **state)
@@ -712,6 +744,13 @@ main(int argc, char **argv)
                                         cmocka_unit_test(umlua_test_11),
                                         cmocka_unit_test(umlua_test_12) };
 
+    const struct CMUnitTest tests_02[] = {
+        cmocka_unit_test(umlua_test_load_err_01),
+        cmocka_unit_test(umlua_test_load_err_02),
+
+    };
+
+    // *** valid scripts ***
     // conserve memory
     strcpy(plg_cfg_fname, "test/plg_cfg.json");
     int r = cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
@@ -719,6 +758,20 @@ main(int argc, char **argv)
         // do not conserve memory
         strcpy(plg_cfg_fname, "test/plg_cfg_ncs.json");
         r += cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
+    }
+    // *** scripts with errors ***
+    // conserve memory
+    if (r == 0) {
+        strcpy(plg_cfg_fname, "test/plg_cfg_err.json");
+        r += cmocka_run_group_tests(tests_02, umplg_run_init, umplg_run_dtor);
+
+        // do not conserve memory
+        if (r == 0) {
+            strcpy(plg_cfg_fname, "test/plg_cfg_err_ncs.json");
+            r += cmocka_run_group_tests(tests_02,
+                                        umplg_run_init,
+                                        umplg_run_dtor);
+        }
     }
 
     return r;

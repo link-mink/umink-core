@@ -1,0 +1,45 @@
+{
+  "umlua": {
+    "db": "test/test.db",
+    "aggressive_gc": true,
+    "conserve_memory": false,
+    "envs": [
+      {
+        "name": "TEST_EVENT_01",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/test_event_01_err.lua",
+        "events": [
+          "TEST_EVENT_01",
+          "TEST_EVENT_01_02"
+        ]
+      },
+      {
+        "name": "TEST_EVENT_02",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/test_event_02_err.lua",
+        "events": [
+          "TEST_EVENT_02"
+        ]
+      },
+      {
+        "name": "TEST_ENV",
+        "auto_start": true,
+        "interval": 500,
+        "path": "test/test_env_err.lua",
+        "events": [
+        ]
+      },
+      {
+        "name": "TEST_ENV_02",
+        "auto_start": true,
+        "interval": 500,
+        "path": "test/test_env_errXX.lua",
+        "events": [
+        ]
+      }
+
+    ]
+  }
+}
