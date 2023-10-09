@@ -100,6 +100,7 @@ umplg_run_dtor(void **state)
     test_t *data = *state;
     // stop
     umd_signal_handler(SIGTERM);
+    umplg_terminate_all(data->m, 0);
     // free
     umlua_shutdown();
     json_object_put(data->m->cfg);

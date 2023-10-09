@@ -8,6 +8,7 @@
  *
  */
 
+#include <umink_pkg_config.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -24,6 +25,12 @@ typedef struct {
     umplg_mngr_t *m;
 } test_t;
 
+static int
+test_sig_init_err(umplg_sh_t *shd)
+{
+    // error
+    return 1;
+}
 
 static void
 umplg_load_test(void **state)
@@ -47,6 +54,25 @@ umplg_load_test(void **state)
     // reload already loaded
     umplgd_t *p4 = umplg_load(m, ".libs/check_umplg_plugin_01.so");
     assert_null(p4);
+
+    // reg signal test
+    umplg_sh_t *sh = calloc(1, sizeof(umplg_sh_t));
+    sh->id = strdup("test_signal");
+    sh->running = false;
+    int r = umplg_reg_signal(m, sh);
+    assert_int_equal(r, 0);
+    // duplicate signal test
+    r = umplg_reg_signal(m, sh);
+    assert_int_equal(r, 1);
+    // error init test
+    sh = calloc(1, sizeof(umplg_sh_t));
+    sh->id = strdup("test_signal_2");
+    sh->init = &test_sig_init_err;
+    sh->running = false;
+    r = umplg_reg_signal(m, sh);
+    assert_int_equal(r, 1);
+    free(sh->id);
+    free(sh);
 }
 
 static int
@@ -126,9 +152,17 @@ umplg_run_test_02(void **state)
                                       .value = "test_value_02" };
 
     // add row 01
-    umplg_stdd_item_add(&cmap, &item_01);
-    umplg_stdd_items_add(&d, &cmap);
+    int r = umplg_stdd_item_add(&cmap, &item_01);
+    assert_int_equal(r, 0);
+    r = umplg_stdd_items_add(&d, &cmap);
+    assert_int_equal(r, 0);
+    // add rows NULL check
+    r = umplg_stdd_items_add(NULL, &cmap);
+    assert_int_equal(r, 1);
     HASH_CLEAR(hh, cmap.table);
+    // add row NULL check
+    r = umplg_stdd_item_add(NULL, &item_01);
+    assert_int_equal(r, 1);
 
     // plugin input data wrapper
     umplg_idata_t idata = { UMPLG_DT_STANDARD, &d };
@@ -147,6 +181,7 @@ umplg_run_test_02(void **state)
     assert_int_equal(res, 0);
 
     // free buffer
+    umplg_stdd_free(NULL);
     umplg_stdd_free(&d);
 }
 
