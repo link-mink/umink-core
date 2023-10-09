@@ -14,7 +14,7 @@ AC_INIT([umink],
 config_flags="$*"
 AC_DEFINE_UNQUOTED([CONFIG_FLAGS],["$config_flags"],[Flags passed to configure])
 AC_SUBST(CONFIG_FLAGS, "$config_flags")
-AM_INIT_AUTOMAKE([foreign subdir-objects nostdinc 1.14])
+AM_INIT_AUTOMAKE([foreign subdir-objects nostdinc serial-tests 1.14])
 AC_CONFIG_SRCDIR([src/services/sysagent/sysagentd.c])
 AC_CONFIG_HEADERS([config.h])
 AX_PREFIX_CONFIG_H(umink_pkg_config.h)

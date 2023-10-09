@@ -32,14 +32,27 @@ jobs:
           gperf \
           libmosquitto-dev \
           mosquitto-dev \
+          mosquitto \
+          mosquitto-clients \
           libpaho-mqtt-dev \
           liblua5.3-dev \
           libjson-c-dev \
           libcmocka-dev \
           libasan5 \
+          iproute2 \
           gcovr && \
           sudo ln -s /usr/lib/x86_64-linux-gnu/pkgconfig/lua-5.3.pc \
           /usr/lib/x86_64-linux-gnu/pkgconfig/lua.pc
+      - name: mosquitto
+        run: |
+          mosquitto_passwd -c -b /tmp/pwdfile user password
+          cp /etc/mosquitto/mosquitto.conf /tmp
+          echo "password_file /tmp/pwdfile" >> /tmp/mosquitto.conf
+          echo "allow_anonymous false" >> /tmp/mosquitto.conf
+          echo "listener 1883" >> /tmp/mosquitto.conf
+          echo "protocol mqtt" >> /tmp/mosquitto.conf
+          mosquitto -c /tmp/mosquitto.conf -v -d
+          mosquitto_pub -h 127.0.0.1 -t "mink/DEBUG_UUID/1/cmd" -m test_payload -u user -P password -r
       - name: Install sonar-scanner and build-wrapper
         uses: SonarSource/sonarcloud-github-c-cpp@v2
       - name: Run build-wrapper

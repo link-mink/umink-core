@@ -128,6 +128,11 @@ check_PROGRAMS = check_umdb \
                  check_umd \
                  check_umplg \
                  check_umlua
+if ENABLE_MQTT
+check_PROGRAMS += check_mqtt
+endif
+
+
 
 check_LTLIBRARIES = check_umplg_plugin_01.la \
                     check_umplg_plugin_02.la
@@ -137,6 +142,10 @@ TESTS = check_umdb \
         check_umd \
         check_umplg \
         check_umlua
+
+if ENABLE_MQTT
+TESTS += check_mqtt
+endif
 
 # umlua tester
 check_umlua_SOURCES = test/check_umlua.c \
@@ -154,6 +163,7 @@ check_umlua_CFLAGS = ${COMMON_INCLUDES} \
                      ${JSON_C_CFLAGS} \
                      ${LUA_CFLAGS} \
                      ${ASAN_FLAGS}
+check_umlua_LDFLAGS = -export-dynamic
 check_umlua_LDADD = -lcmocka \
                     ${JSON_C_LIBS} \
                     ${SQLITE_LIBS} \
@@ -161,7 +171,6 @@ check_umlua_LDADD = -lcmocka \
 
 # umplg manager tester
 check_umplg_plugin_01_la_SOURCES = test/check_umplg_plugin_01.c \
-                                   src/umd/umdaemon.c \
                                    src/utils/umink_plugin.c
 check_umplg_plugin_01_la_CFLAGS = ${COMMON_INCLUDES} \
                                   ${ASAN_FLAGS} \
@@ -179,7 +188,6 @@ check_umplg_plugin_01_la_LDFLAGS = -version-info 1:0:0 \
                                    -rpath /tmp
 
 check_umplg_plugin_02_la_SOURCES = test/check_umplg_plugin_01.c \
-                                   src/umd/umdaemon.c \
                                    src/utils/umink_plugin.c
 check_umplg_plugin_02_la_CFLAGS = ${COMMON_INCLUDES} \
                                   ${ASAN_FLAGS} \
@@ -202,6 +210,7 @@ check_umplg_SOURCES = test/check_umplg.c \
                       src/utils/umink_plugin.c
 check_umplg_CFLAGS = ${COMMON_INCLUDES} \
                      ${ASAN_FLAGS}
+check_umplg_LDFLAGS = -export-dynamic
 check_umplg_LDADD = -lcmocka
 
 # umdaemon tester
@@ -209,6 +218,7 @@ check_umd_SOURCES = test/check_umd.c \
                     src/umd/umdaemon.c
 check_umd_CFLAGS = ${COMMON_INCLUDES} \
                    ${ASAN_FLAGS}
+check_umd_LDFLAGS = -export-dynamic
 check_umd_LDADD = -lcmocka
 
 # umdb tester
@@ -216,6 +226,7 @@ check_umdb_SOURCES = test/check_umdb.c \
                      src/utils/umdb.c
 check_umdb_CFLAGS = ${COMMON_INCLUDES} \
                     ${ASAN_FLAGS}
+check_umdb_LDFLAGS = -export-dynamic
 check_umdb_LDADD = -lcmocka \
                    ${SQLITE_LIBS}
 
@@ -224,7 +235,32 @@ check_umc_SOURCES = test/check_umc.c \
                     src/utils/umcounters.c
 check_umc_CFLAGS = ${COMMON_INCLUDES} \
                    ${ASAN_FLAGS}
+check_umc_LDFLAGS = -export-dynamic
 check_umc_LDADD = -lcmocka
+
+# mqtt tester
+if ENABLE_MQTT
+check_mqtt_SOURCES = test/check_mqtt.c \
+                     src/umd/umdaemon.c \
+                     src/utils/umcounters.c \
+                     src/services/sysagent/umlua.c \
+                     src/services/sysagent/umlua_m.c \
+                     src/utils/umdb.c \
+                     src/utils/umink_plugin.c
+check_mqtt_CFLAGS = ${COMMON_INCLUDES} \
+                    ${JSON_C_CFLAGS} \
+                    -DLUA_COMPAT_ALL \
+                    -DLUA_COMPAT_5_1 \
+                    -DLUA_COMPAT_5_2 \
+                    -DLUA_COMPAT_5_3 \
+                    ${LUA_CFLAGS} \
+                    ${ASAN_FLAGS}
+check_mqtt_LDFLAGS = -export-dynamic
+check_mqtt_LDADD = -lcmocka \
+                   ${JSON_C_LIBS} \
+                   ${LUA_LIBS} \
+                   ${SQLITE_LIBS}
+endif
 
 # cleanup rule
 distclean-local: distclean-ax-prefix-umink-pkg-config-h
