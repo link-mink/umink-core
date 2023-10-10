@@ -186,7 +186,10 @@ mqtt_test_03(void **state)
     // run signal
     int r = umplg_proc_signal(m, "TEST_MQTT_03", NULL, &b, &b_sz, 0, NULL);
     assert_int_equal(r, 0);
-    assert_null(b);
+    assert_non_null(b);
+    assert_string_equal(b, "OK");
+    free(b);
+    b = NULL;
 
     // wait for data
     sleep(1);
