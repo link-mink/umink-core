@@ -388,7 +388,7 @@ mqtt_handle_bin(const char *tpc, const MQTTAsync_message *msg)
             mqtt_bin_upl_del(f->uuid);
             // rename ".tmp" extension
             size_t sl = strlen(fp) - 4;
-            char fp2[sl];
+            char fp2[sl + 1];
             memcpy(fp2, fp, sl);
             fp2[sl] = '\0';
             rename(fp, fp2);
