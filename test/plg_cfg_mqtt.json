@@ -39,6 +39,33 @@
         "events": [
           "TEST_MQTT_01"
         ]
+      },
+      {
+        "name": "TEST_MQTT_02",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/mqtt_test_02.lua",
+        "events": [
+          "TEST_MQTT_02"
+        ]
+      },
+      {
+        "name": "TEST_MQTT_03",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/mqtt_test_03.lua",
+        "events": [
+          "TEST_MQTT_03"
+        ]
+      },
+      {
+        "name": "TEST_MQTT_04",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/mqtt_test_04.lua",
+        "events": [
+          "TEST_MQTT_04"
+        ]
       }
     ]
   }

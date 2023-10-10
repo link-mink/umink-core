@@ -141,14 +141,117 @@ mqtt_test_01(void **state)
     assert_non_null(b);
     assert_string_equal(b, "mink/DEBUG_UUID/1/cmdtest_payloadmqtt_local");
     free(b);
+}
 
+
+static void
+mqtt_test_02(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    assert_non_null(data);
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_MQTT_02", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_null(b);
+
+    // wait for data
+    sleep(1);
+    // run signal (get data)
+    r = umplg_proc_signal(m, "TEST_MQTT_01", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    assert_string_equal(b, "mink/DEBUG_UUID/1/cmdtest_dummy_datamqtt_local");
+    free(b);
+}
+
+static void
+mqtt_test_03(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    assert_non_null(data);
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_MQTT_03", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_null(b);
+
+    // wait for data
+    sleep(1);
+    // run signal (get data)
+    r = umplg_proc_signal(m, "TEST_MQTT_01", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    assert_string_equal(b, "mink/DEBUG_UUID/1/cmdtest_dummy_data_02mqtt_local");
+    free(b);
+}
+
+static void
+mqtt_test_04(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    assert_non_null(data);
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_MQTT_04", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    // file uuid returned
+    if (strlen(b) != 36) {
+        fail();
+    }
+    // wait for data
+    sleep(7);
+
+    // check is file was uploaded
+    char fp[strlen("/tmp/mink.bin") + 36 + 2];
+    fp[0] = '\0';
+    strcat(fp, "/tmp/mink.bin");
+    strcat(fp, "/");
+    strcat(fp, b);
+    FILE *f = fopen(fp, "r");
+    assert_non_null(f);
+    if (fseek(f, 0, SEEK_END) < 0) {
+        fclose(f);
+        fail();
+    }
+    int32_t fsz = ftell(f);
+    if (fsz <= 0) {
+        fclose(f);
+        fail();
+    }
+    fclose(f);
+    assert_int_equal(fsz, 1024);
+    // cleanup
+    free(b);
 }
 
 int
 main(int argc, char **argv)
 {
     const struct CMUnitTest tests[] = { cmocka_unit_test(mqtt_test_connect),
-                                        cmocka_unit_test(mqtt_test_01) };
+                                        cmocka_unit_test(mqtt_test_01),
+                                        cmocka_unit_test(mqtt_test_02),
+                                        cmocka_unit_test(mqtt_test_03),
+                                        cmocka_unit_test(mqtt_test_04) };
 
     strcpy(plg_cfg_fname, "test/plg_cfg_mqtt.json");
     return cmocka_run_group_tests(tests, mqtt_run_init, mqtt_run_dtor);
