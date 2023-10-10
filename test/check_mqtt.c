@@ -218,9 +218,26 @@ mqtt_test_04(void **state)
     assert_int_equal(r, 0);
     assert_non_null(b);
     // file uuid returned
-    if (strlen(b) != 36) {
+    if (strlen(b) != 73) {
         fail();
     }
+
+    // tokenize
+    char *valid_uuid = NULL;
+    char *incomplete_uuid = NULL;
+    char *token = NULL;
+    char *saveptr = NULL;
+
+    // get valid uuid (all chunks)
+    token = strtok_r(b, ":", &saveptr);
+    assert_non_null(token);
+    valid_uuid = strdup(token);
+
+    // get incomplete uuid (only first chunk)
+    token = strtok_r(NULL, ":", &saveptr);
+    assert_non_null(token);
+    incomplete_uuid = strdup(token);
+
     // wait for data
     sleep(7);
 
@@ -243,8 +260,17 @@ mqtt_test_04(void **state)
     }
     fclose(f);
     assert_int_equal(fsz, 1024);
+
+    // incomplete file should have been removed
+    sleep(5);
+    strcpy(&fp[strlen(fp) - 36], incomplete_uuid);
+    FILE *f2 = fopen(fp, "r");
+    assert_null(f2);
+
     // cleanup
     free(b);
+    free(valid_uuid);
+    free(incomplete_uuid);
 }
 
 int

@@ -26,6 +26,9 @@ do
         # chunk 03
         echo "Uploading chunk 03"
         mosquitto_pub -h 127.0.0.1 -t "mink.bin/DEBUG_UUID/$UUID/upload" -f /tmp/xad  -u user -P password
+        # one chunk for the file upload which is supposed to timeout
+        UUID2=$(cat /tmp/tmp_file_uuid_timeout)
+        mosquitto_pub -h 127.0.0.1 -t "mink.bin/DEBUG_UUID/$UUID2/upload" -f /tmp/xad  -u user -P password
         sleep 2
         CSUM2=$(sha256sum -z /tmp/mink.bin/$UUID|cut -d' ' -f1)
         if [ $CSUM1 != $CSUM2 ]; then
