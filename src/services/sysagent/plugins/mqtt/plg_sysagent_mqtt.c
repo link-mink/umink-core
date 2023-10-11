@@ -173,7 +173,7 @@ mqtt_proc_thread(void *args)
         sem_timedwait(&conn->sig_sem, &ts);
         // check if process is terminating
         if (umd_is_terminating()) {
-            return NULL;
+            break;
         }
 
         // check queue
@@ -192,6 +192,12 @@ mqtt_proc_thread(void *args)
         }
     }
 
+    // flush
+    while (spscq_pop(conn->sig_q, (void **)&data) == 0) {
+        // cleanup
+        umplg_stdd_free(data);
+        free(data);
+    }
     return NULL;
 }
 
