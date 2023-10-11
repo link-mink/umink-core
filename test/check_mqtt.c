@@ -37,6 +37,17 @@ int umlua_init(umplg_mngr_t *pm);
 void umlua_start(umplg_mngr_t *pm);
 
 // globals
+static int plg_cfg_id = 0;
+static bool do_pause = false;
+static char *plg_cfg_err_list[] = {
+    "test/plg_cfg_mqtt_err_01.json",
+    "test/plg_cfg_mqtt_err_02.json",
+    "test/plg_cfg_mqtt_err_03.json",
+    "test/plg_cfg_mqtt_err_04.json",
+    "test/plg_cfg_mqtt_err_05.json",
+    "test/plg_cfg_mqtt_err_06.json",
+    "test/plg_cfg_mqtt_err_07.json",
+};
 static char plg_cfg_fname[128];
 
 // dummy struct for state passing
@@ -49,7 +60,15 @@ static void
 load_cfg(umplg_mngr_t *m)
 {
     // load plugins configuration
-    FILE *f = fopen(plg_cfg_fname, "r");
+    char *fname = plg_cfg_fname;
+    if (strlen(fname) == 0) {
+        fname = plg_cfg_err_list[plg_cfg_id];
+        do_pause = true;
+
+    } else {
+        do_pause = false;
+    }
+    FILE *f = fopen(fname, "r");
     assert_non_null(f);
     if (fseek(f, 0, SEEK_END) < 0) {
         fclose(f);
@@ -95,6 +114,11 @@ mqtt_run_init(void **state)
     umlua_start(data->m);
 
     *state = data;
+
+    // pause ?
+    if (do_pause) {
+        sleep(1);
+    }
     return 0;
 }
 
@@ -273,6 +297,31 @@ mqtt_test_04(void **state)
     free(incomplete_uuid);
 }
 
+static void
+mqtt_test_cfg_01(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    assert_non_null(data);
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_MQTT_03", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    char *cmp_str = "ERR";
+    if (plg_cfg_id == 6) {
+        cmp_str = "OK";
+    }
+    assert_string_equal(b, cmp_str);
+    free(b);
+    plg_cfg_id++;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -282,7 +331,40 @@ main(int argc, char **argv)
                                         cmocka_unit_test(mqtt_test_03),
                                         cmocka_unit_test(mqtt_test_04) };
 
+    const struct CMUnitTest tests_cfg[] = {
+        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor),
+        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor),
+        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor),
+        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor),
+        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor),
+        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor),
+        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor),
+
+    };
+
+    // group 01
     strcpy(plg_cfg_fname, "test/plg_cfg_mqtt.json");
-    return cmocka_run_group_tests(tests, mqtt_run_init, mqtt_run_dtor);
+    int r = cmocka_run_group_tests(tests, mqtt_run_init, mqtt_run_dtor);
+    if (r == 0) {
+        // cfg loading, group 02
+        plg_cfg_fname[0] = '\0';
+        r += cmocka_run_group_tests(tests_cfg, NULL, NULL);
+    }
+    return r;
+
 }
 

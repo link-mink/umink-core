@@ -1,0 +1,36 @@
+{
+  "plg_sysagent_mqtt.so": {
+    "connections": [
+      {
+        "name": "mqtt_local",
+        "address": "tcp://127.0.0.1:1883",
+        "client_id": "mqtt_unit_tester",
+        "username": "user",
+        "password": "password",
+        "keep_alive": 3600,
+        "proc_thread_qsize": 256,
+        "bin_upload_path": 1000,
+        "subscriptions": [
+          "mink/DEBUG_UUID/+/cmd",
+          "mink.bin/#"
+        ]
+      }
+    ]
+  },
+  "umlua": {
+    "db": "test/test.db",
+    "aggressive_gc": true,
+    "conserve_memory": true,
+    "envs": [
+      {
+        "name": "TEST_MQTT_03",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/mqtt_test_03.lua",
+        "events": [
+          "TEST_MQTT_03"
+        ]
+      }
+    ]
+  }
+}

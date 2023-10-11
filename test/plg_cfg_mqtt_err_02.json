@@ -1,0 +1,23 @@
+{
+  "plg_sysagent_mqtt.so": {
+    "connections": [
+        "mqtt_local"
+    ]
+  },
+  "umlua": {
+    "db": "test/test.db",
+    "aggressive_gc": true,
+    "conserve_memory": true,
+    "envs": [
+      {
+        "name": "TEST_MQTT_03",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/mqtt_test_03.lua",
+        "events": [
+          "TEST_MQTT_03"
+        ]
+      }
+    ]
+  }
+}
