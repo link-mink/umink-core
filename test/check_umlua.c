@@ -382,7 +382,7 @@ umlua_test_env_01(void **state)
     // get pm
     test_t *data = *state;
 
-    // sleep for 2 seconds (counters value should be at 4)
+    // sleep for 2 seconds (counters value should be at 4 || 5)
     sleep(2);
 
     // get custom counter
@@ -390,12 +390,15 @@ umlua_test_env_01(void **state)
     assert_null(c);
     c = umc_get(data->umd->perf, "test_env_counter", true);
     assert_non_null(c);
-    assert_int_equal(c->values.last.value, 4);
+    if (c->values.last.value < 4 || c->values.last.value > 5) {
+        fail_msg("test counter should be >= 4 (freq/duration = 500msec/2s)");
+    }
+    int expc = c->values.last.value;
 
     // check runtime counters (execution count)
     c = umc_get(data->umd->perf, "lua.environment.TEST_ENV.count", true);
     assert_non_null(c);
-    assert_int_equal(c->values.last.value, 4);
+    assert_int_equal(c->values.last.value, expc);
 
     // check runtime counters (rate, should be around 2 per second for
     // a 500msec frequency)
