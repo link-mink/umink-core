@@ -24,8 +24,7 @@ ASAN_FLAGS = -fsanitize=address \
              -fno-omit-frame-pointer \
              -fprofile-abs-path \
              -fprofile-arcs \
-             -ftest-coverage \
-             --coverage
+             -ftest-coverage
 
 # umINK directories
 confdir = $(sysconfdir)/umink
