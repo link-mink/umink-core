@@ -40,9 +40,10 @@ jobs:
           libcmocka-dev \
           libasan5 \
           iproute2 \
-          gcovr && \
+          libxml2-utils &&
           sudo ln -s /usr/lib/x86_64-linux-gnu/pkgconfig/lua-5.3.pc \
-          /usr/lib/x86_64-linux-gnu/pkgconfig/lua.pc
+          /usr/lib/x86_64-linux-gnu/pkgconfig/lua.pc &&
+          pip3 install 'gcovr == 6'
       - name: mosquitto
         run: |
           mosquitto_passwd -c -b /tmp/pwdfile user password
