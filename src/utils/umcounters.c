@@ -39,7 +39,7 @@ umc_free_ctx(umc_ctx_t *ctx)
     pthread_mutex_lock(&ctx->mtx);
     HASH_ITER(hh, ctx->counters, c, tmp)
     {
-        HASH_DEL(ctx->counters, c);
+        HASH_DEL(ctx->counters, c); // GCOVR_EXCL_BR_LINE
         pthread_mutex_destroy(&c->mtx);
         free(c);
     }
@@ -60,7 +60,7 @@ umc_new_counter(umc_ctx_t *ctx, const char *id, enum umc_type type)
 
     pthread_mutex_lock(&ctx->mtx);
 
-    HASH_FIND_STR(ctx->counters, id, c);
+    HASH_FIND_STR(ctx->counters, id, c); // GCOVR_EXCL_BR_LINE
     if (c != NULL) {
         pthread_mutex_unlock(&ctx->mtx);
         return c;
@@ -72,7 +72,7 @@ umc_new_counter(umc_ctx_t *ctx, const char *id, enum umc_type type)
     c->idp = c->id;
     c->type = type;
     pthread_mutex_init(&c->mtx, NULL);
-    HASH_ADD_STR(ctx->counters, id, c);
+    HASH_ADD_STR(ctx->counters, id, c); // GCOVR_EXCL_BR_LINE
 
     pthread_mutex_unlock(&ctx->mtx);
 
@@ -91,7 +91,7 @@ umc_get(umc_ctx_t *ctx, const char *id, bool lock)
         pthread_mutex_lock(&ctx->mtx);
     }
 
-    HASH_FIND_STR(ctx->counters, id, c);
+    HASH_FIND_STR(ctx->counters, id, c); // GCOVR_EXCL_BR_LINE
 
     if (lock) {
         pthread_mutex_unlock(&ctx->mtx);

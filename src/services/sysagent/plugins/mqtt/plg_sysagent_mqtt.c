@@ -220,7 +220,7 @@ mqtt_bin_upl_add(const char *path, size_t fsz)
     char uuid_str[37];
     uuid_unparse_lower(uuid, uuid_str);
     // check for uuid
-    HASH_FIND_STR(bin_uploads, uuid_str, f);
+    HASH_FIND_STR(bin_uploads, uuid_str, f); // GCOVR_EXCL_BR_LINE
     if (f != NULL) {
         pthread_mutex_unlock(&bin_upl_mtx);
         return NULL;
@@ -231,7 +231,7 @@ mqtt_bin_upl_add(const char *path, size_t fsz)
     memcpy(f->uuid, uuid_str, sizeof(uuid_str));
     f->ts = time(NULL);
     f->size = fsz;
-    HASH_ADD_STR(bin_uploads, uuid, f);
+    HASH_ADD_STR(bin_uploads, uuid, f); // GCOVR_EXCL_BR_LINE
 
     pthread_mutex_unlock(&bin_upl_mtx);
     return f;
@@ -247,13 +247,13 @@ mqtt_bin_upl_del(const char *uuid)
     pthread_mutex_lock(&bin_upl_mtx);
 
     // check for uuid
-    HASH_FIND_STR(bin_uploads, uuid, f);
+    HASH_FIND_STR(bin_uploads, uuid, f); // GCOVR_EXCL_BR_LINE
     if (f == NULL) {
         pthread_mutex_unlock(&bin_upl_mtx);
         return 1;
     }
     // remove
-    HASH_DEL(bin_uploads, f);
+    HASH_DEL(bin_uploads, f); // GCOVR_EXCL_BR_LINE
     free(f);
 
     pthread_mutex_unlock(&bin_upl_mtx);
@@ -320,7 +320,7 @@ mqtt_handle_bin(const char *tpc, const MQTTAsync_message *msg)
     }
 
     mqtt_file_d_t *f = NULL;
-    HASH_FIND_STR(bin_uploads, file_uuid, f);
+    HASH_FIND_STR(bin_uploads, file_uuid, f); // GCOVR_EXCL_BR_LINE
     if (f == NULL) {
         umd_log(UMD,
                 UMD_LLT_ERROR,
@@ -416,7 +416,7 @@ mqtt_bin_cleanup()
     HASH_ITER(hh, bin_uploads, f, f_tmp)
     {
         if (now - f->ts > SIG_SEM_TIMEOUT) {
-            HASH_DEL(bin_uploads, f);
+            HASH_DEL(bin_uploads, f); // GCOVR_EXCL_BR_LINE
             // create file path str
             char fp[strlen(f->path) + strlen(f->uuid) + 6];
             gen_temp_fname(f, fp);
@@ -659,7 +659,9 @@ mqtt_mngr_add_conn(struct mqtt_conn_mngr *m,
     }
     // label should not be present
     struct mqtt_conn_d *tmp_conn = NULL;
+    // GCOVR_EXCL_BR_START
     HASH_FIND_STR(m->conns, json_object_get_string(j_name), tmp_conn);
+    // GCOVR_EXCL_BR_STOP
     if (tmp_conn != NULL) {
         return NULL;
     }
@@ -694,7 +696,9 @@ mqtt_mngr_add_conn(struct mqtt_conn_mngr *m,
     // lock
     pthread_mutex_lock(&m->mtx);
     // add to conn list
+    // GCOVR_EXCL_BR_START
     HASH_ADD_KEYPTR(hh, m->conns, c->name, strlen(c->name), c);
+    // GCOVR_EXCL_BR_STOP
     // unlock
     pthread_mutex_unlock(&m->mtx);
     // return new conn
@@ -724,12 +728,12 @@ mqtt_mngr_del_conn(struct mqtt_conn_mngr *m, const char *name, bool th_safe)
     if (th_safe) {
         pthread_mutex_lock(&m->mtx);
     }
-    HASH_FIND_STR(m->conns, name, tmp_conn);
+    HASH_FIND_STR(m->conns, name, tmp_conn); // GCOVR_EXCL_BR_LINE
     if (tmp_conn != NULL) {
         pthread_join(tmp_conn->sig_th, NULL);
         sem_destroy(&tmp_conn->sig_sem);
         spscq_free(tmp_conn->sig_q);
-        HASH_DEL(m->conns, tmp_conn);
+        HASH_DEL(m->conns, tmp_conn); // GCOVR_EXCL_BR_LINE
         MQTTAsync_destroy(&tmp_conn->client);
         free(tmp_conn->name);
         utarray_free(tmp_conn->topics);
@@ -782,7 +786,7 @@ mqtt_mngr_get_conn(struct mqtt_conn_mngr *m, const char *name)
     struct mqtt_conn_d *tmp_conn = NULL;
     // lock
     pthread_mutex_lock(&m->mtx);
-    HASH_FIND_STR(m->conns, name, tmp_conn);
+    HASH_FIND_STR(m->conns, name, tmp_conn); // GCOVR_EXCL_BR_LINE
     // unlock
     pthread_mutex_unlock(&m->mtx);
     return tmp_conn;

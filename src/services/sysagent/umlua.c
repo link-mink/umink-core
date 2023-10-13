@@ -126,7 +126,7 @@ lenvm_get_envd(struct lua_env_mngr *lem, const char *n)
     pthread_mutex_lock(&lem->mtx);
     // find env
     struct lua_env_d *env = NULL;
-    HASH_FIND_STR(lem->envs, n, env);
+    HASH_FIND_STR(lem->envs, n, env); // GCOVR_EXCL_BR_LINE
     // unlock
     pthread_mutex_unlock(&lem->mtx);
     // return env
@@ -142,9 +142,9 @@ lenvm_del_envd(struct lua_env_mngr *lem, const char *n, bool th_safe)
     }
     // find env
     struct lua_env_d *env = NULL;
-    HASH_FIND_STR(lem->envs, n, env);
+    HASH_FIND_STR(lem->envs, n, env); // GCOVR_EXCL_BR_LINE
     if (env != NULL) {
-        HASH_DEL(lem->envs, env);
+        HASH_DEL(lem->envs, env); // GCOVR_EXCL_BR_LINE
     }
     // unlock
     if (th_safe) {
@@ -161,9 +161,11 @@ lenvm_new_envd(struct lua_env_mngr *lem, struct lua_env_d *env)
     pthread_mutex_lock(&lem->mtx);
     // find env
     struct lua_env_d *tmp_env = NULL;
-    HASH_FIND_STR(lem->envs, env->name, tmp_env);
+    HASH_FIND_STR(lem->envs, env->name, tmp_env); // GCOVR_EXCL_BR_LINE
     if (tmp_env == NULL) {
+        // GCOVR_EXCL_BR_START
         HASH_ADD_KEYPTR(hh, lem->envs, env->name, strlen(env->name), env);
+        // GCOVR_EXCL_BR_STOP
         tmp_env = env;
     }
     // unlock
@@ -179,7 +181,7 @@ lenvm_envd_exists(struct lua_env_mngr *lem, const char *n)
     pthread_mutex_lock(&lem->mtx);
     // find env
     struct lua_env_d *tmp_env = NULL;
-    HASH_FIND_STR(lem->envs, n, tmp_env);
+    HASH_FIND_STR(lem->envs, n, tmp_env); // GCOVR_EXCL_BR_LINE
     // unlock
     pthread_mutex_unlock(&lem->mtx);
     return (tmp_env != NULL);
