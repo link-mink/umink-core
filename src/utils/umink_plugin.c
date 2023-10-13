@@ -47,7 +47,7 @@ umplg_load(umplg_mngr_t *pm, const char *fpath)
     const int *tmp_rh = reg_hooks;
     umplg_hkd_t *hook = NULL;
     while (*tmp_rh != -1) {
-        HASH_FIND_INT(pm->hooks, tmp_rh, hook);
+        HASH_FIND_INT(pm->hooks, tmp_rh, hook); // GCOVR_EXCL_BR_LINE
         if (hook != NULL) {
             dlclose(h);
             umd_log(UMD, UMD_LLT_ERROR, "umplg_load: hook [%d] already exists", *tmp_rh);
@@ -77,7 +77,7 @@ umplg_load(umplg_mngr_t *pm, const char *fpath)
         hook->id = *tmp_rh;
         hook->plgp = pdp;
         // add to map
-        HASH_ADD_INT(pm->hooks, id, hook);
+        HASH_ADD_INT(pm->hooks, id, hook); // GCOVR_EXCL_BR_LINE
         // next
         tmp_rh++;
     }
@@ -100,7 +100,7 @@ umplg_run(umplg_mngr_t *pm, int cmd_id, int idt, umplg_idata_t *data, bool is_lo
 
     // find plugin from cmd_id (hook)
     umplg_hkd_t *hook = NULL;
-    HASH_FIND_INT(pm->hooks, &cmd_id, hook);
+    HASH_FIND_INT(pm->hooks, &cmd_id, hook); // GCOVR_EXCL_BR_LINE
     if (hook == NULL) {
         return 1;
     }
@@ -126,7 +126,7 @@ umplg_reg_signal(umplg_mngr_t *pm, umplg_sh_t *sh)
     // single handler descriptor
     umplg_sh_t *tmp_shd = NULL;
     // check if signal was already registered
-    HASH_FIND_STR(pm->signals, sh->id, tmp_shd);
+    HASH_FIND_STR(pm->signals, sh->id, tmp_shd); // GCOVR_EXCL_BR_LINE
     if (tmp_shd != NULL) {
         return 1;
     }
@@ -138,7 +138,9 @@ umplg_reg_signal(umplg_mngr_t *pm, umplg_sh_t *sh)
         }
     }
     // add signal
+    // GCOVR_EXCL_BR_START
     HASH_ADD_KEYPTR(hh, pm->signals, sh->id, strlen(sh->id), sh);
+    // GCOVR_EXCL_BR_STOP
 
     // no error
     return 0;
@@ -160,7 +162,7 @@ umplg_proc_signal(umplg_mngr_t *pm,
     // single handler descriptor
     umplg_sh_t *tmp_shd = NULL;
     // find signal
-    HASH_FIND_STR(pm->signals, s, tmp_shd);
+    HASH_FIND_STR(pm->signals, s, tmp_shd); // GCOVR_EXCL_BR_LINE
     if (tmp_shd == NULL) {
         return UMPLG_RES_UNKNOWN_SIGNAL;
     }
@@ -195,7 +197,9 @@ add_cmd_id_map_item(int cmd_id, const char *name, umplg_mngr_t *pm)
     umplg_cmd_map_t *cmd = malloc(sizeof(umplg_cmd_map_t));
     cmd->id = cmd_id;
     cmd->name = name;
+    // GCOVR_EXCL_BR_START
     HASH_ADD_KEYPTR(hh, pm->cmd_map, cmd->name, strlen(cmd->name), cmd);
+    // GCOVR_EXCL_BR_STOP
 }
 
 umplg_mngr_t *
@@ -231,7 +235,7 @@ umplg_free_mngr(umplg_mngr_t *pm)
     umplg_sh_t *tmp_sh = NULL;
     HASH_ITER(hh, pm->signals, c_sh, tmp_sh)
     {
-        HASH_DEL(pm->signals, c_sh);
+        HASH_DEL(pm->signals, c_sh); // GCOVR_EXCL_BR_LINE
         if (c_sh->term != NULL && !c_sh->terminated) {
             c_sh->term(c_sh, 0);
             c_sh->term(c_sh, 1);
@@ -248,7 +252,7 @@ umplg_free_mngr(umplg_mngr_t *pm)
     umplg_hkd_t *tmp_hk = NULL;
     HASH_ITER(hh, pm->hooks, c_hk, tmp_hk)
     {
-        HASH_DEL(pm->hooks, c_hk);
+        HASH_DEL(pm->hooks, c_hk); // GCOVR_EXCL_BR_LINE
         free(c_hk);
     }
 
@@ -257,7 +261,7 @@ umplg_free_mngr(umplg_mngr_t *pm)
     umplg_cmd_map_t *tmp_cm = NULL;
     HASH_ITER(hh, pm->cmd_map, c_cm, tmp_cm)
     {
-        HASH_DEL(pm->cmd_map, c_cm);
+        HASH_DEL(pm->cmd_map, c_cm); // GCOVR_EXCL_BR_LINE
         free(c_cm);
     }
 
@@ -323,7 +327,9 @@ std_items_copy(void *_dst, const void *_src)
         n = malloc(sizeof(umplg_data_std_item_t));
         n->name = strdup(s->name);
         n->value = strdup(s->value);
+        // GCOVR_EXCL_BR_START
         HASH_ADD_KEYPTR(hh, dst->table, n->name, strlen(n->name), n);
+        // GCOVR_EXCL_BR_STOP
     }
 }
 
@@ -337,7 +343,7 @@ std_items_dtor(void *_elt)
     // free and remove hashmap elements
     HASH_ITER(hh, elt->table, s, tmp)
     {
-        HASH_DEL(elt->table, s);
+        HASH_DEL(elt->table, s); // GCOVR_EXCL_BR_LINE
         free(s->name);
         free(s->value);
         free(s);
@@ -400,7 +406,9 @@ umplg_stdd_item_add(umplg_data_std_items_t *items, umplg_data_std_item_t *item)
         return 1;
     }
     // add item
+    // GCOVR_EXCL_BR_START
     HASH_ADD_KEYPTR(hh, items->table, item->name, strlen(item->name), item);
+    // GCOVR_EXCL_BR_STOP
 
     // success
     return 0;
@@ -410,7 +418,7 @@ int
 umplg_get_cmd_id(umplg_mngr_t *pm, const char *cmd_str)
 {
     umplg_cmd_map_t *cmd = NULL;
-    HASH_FIND_STR(pm->cmd_map, cmd_str, cmd);
+    HASH_FIND_STR(pm->cmd_map, cmd_str, cmd); // GCOVR_EXCL_BR_LINE
     // id found
     if (cmd != NULL) {
         return cmd->id;
