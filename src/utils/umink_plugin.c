@@ -25,7 +25,7 @@ umplg_load(umplg_mngr_t *pm, const char *fpath)
     // open and resolve symbols now
     void *h = dlopen(fpath, RTLD_NOW);
     if (!h) {
-        umd_log(UMD, UMD_LLT_ERROR, "umplg_load: %s", dlerror());
+        umd_log(UMD, UMD_LLT_ERROR, "umplg_load (%s): %s", fpath, dlerror());
         return NULL;
     }
 
@@ -39,7 +39,15 @@ umplg_load(umplg_mngr_t *pm, const char *fpath)
 
     // first 4 must exist
     if (!(reg_hooks && init && term && cmdh)) {
-        umd_log(UMD, UMD_LLT_ERROR, "umplg_load: %s", dlerror());
+        umd_log(UMD,
+                UMD_LLT_ERROR,
+                "umplg_load (%s): missing handlers [%p, %p, %p, %p, %p]",
+                fpath,
+                reg_hooks,
+                init,
+                term,
+                cmdh,
+                cmdh_l);
         dlclose(h);
         return NULL;
     }
@@ -50,7 +58,11 @@ umplg_load(umplg_mngr_t *pm, const char *fpath)
         HASH_FIND_INT(pm->hooks, tmp_rh, hook); // GCOVR_EXCL_BR_LINE
         if (hook != NULL) {
             dlclose(h);
-            umd_log(UMD, UMD_LLT_ERROR, "umplg_load: hook [%d] already exists", *tmp_rh);
+            umd_log(UMD,
+                    UMD_LLT_ERROR,
+                    "umplg_load (%s): hook [%d] already exists",
+                    fpath,
+                    *tmp_rh);
             return NULL;
         }
         tmp_rh++;
