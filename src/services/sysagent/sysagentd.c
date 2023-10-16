@@ -187,11 +187,10 @@ init_plugins(umplg_mngr_t *pm, const char *pdir)
             strcpy(&plg_fname[pdl], "/");
             strcpy(&plg_fname[pdl + 1], lst[i]);
             // load plugin
-            if (umplg_load(pm, plg_fname))
-                printf("Loading plugin [%s]...\n", lst[i]);
-
-            else
-                printf("Cannot load plugin [%s], mandatory methods not found!\n", lst[i]);
+            umd_log(UMD, UMD_LLT_INFO, "Loading plugin [%s]", lst[i]);
+            if (umplg_load(pm, plg_fname) == NULL) {
+                umd_log(UMD, UMD_LLT_ERROR, "Cannot load plugin [%s]", lst[i]);
+            }
         }
         // free item
         free(lst[i]);
