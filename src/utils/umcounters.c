@@ -144,7 +144,7 @@ umc_inc(umc_t *c, uint64_t val)
 umc_t *
 umc_get_inc(umc_ctx_t *ctx, const char *id, uint64_t val, bool lock)
 {
-    if (lock) {
+    if (lock && ctx) {
         pthread_mutex_lock(&ctx->mtx);
     }
 
@@ -155,7 +155,7 @@ umc_get_inc(umc_ctx_t *ctx, const char *id, uint64_t val, bool lock)
         pthread_mutex_unlock(&c->mtx);
     }
 
-    if (lock) {
+    if (lock && ctx) {
         pthread_mutex_unlock(&ctx->mtx);
     }
 
