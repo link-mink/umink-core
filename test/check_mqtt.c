@@ -35,18 +35,60 @@
 void umlua_shutdown();
 int umlua_init(umplg_mngr_t *pm);
 void umlua_start(umplg_mngr_t *pm);
+static void run_signal_expect_error(void **state);
+static int mqtt_run_init(void **state);
+static int mqtt_run_dtor(void **state);
 
 // globals
 static int plg_cfg_id = 0;
 static bool do_pause = false;
-static char *plg_cfg_err_list[] = {
-    "test/plg_cfg_mqtt_err_01.json",
-    "test/plg_cfg_mqtt_err_02.json",
-    "test/plg_cfg_mqtt_err_03.json",
-    "test/plg_cfg_mqtt_err_04.json",
-    "test/plg_cfg_mqtt_err_05.json",
-    "test/plg_cfg_mqtt_err_06.json",
-    "test/plg_cfg_mqtt_err_07.json",
+static struct {
+    char *cfg_file;
+    char *cfg_error_msg;
+    struct CMUnitTest tests[1];
+
+} err_tests[] = {
+    { "test/plg_cfg_mqtt_err_01.json",
+      "No 'connections' array present",
+      { cmocka_unit_test_setup_teardown(run_signal_expect_error,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor) } },
+
+    { "test/plg_cfg_mqtt_err_02.json",
+      "Invalid MQTT connection type: STRING instead of JSON OBJECT",
+      { cmocka_unit_test_setup_teardown(run_signal_expect_error,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor) } },
+
+    { "test/plg_cfg_mqtt_err_03.json",
+      "MQTT connection name is missing",
+      { cmocka_unit_test_setup_teardown(run_signal_expect_error,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor) } },
+    { "test/plg_cfg_mqtt_err_04.json",
+      "Invalid MQTT connection name type: NUMBER instead of STRING",
+      { cmocka_unit_test_setup_teardown(run_signal_expect_error,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor) } },
+
+    { "test/plg_cfg_mqtt_err_05.json",
+      "Invalid 'proc_thread_qsize' type: STRING instead of NUMBER",
+      { cmocka_unit_test_setup_teardown(run_signal_expect_error,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor) } },
+
+    { "test/plg_cfg_mqtt_err_06.json",
+      "Invalid 'bin_upload_path' type: NUMBER instead of STRING",
+      { cmocka_unit_test_setup_teardown(run_signal_expect_error,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor) } },
+
+    { "test/plg_cfg_mqtt_err_07.json",
+      "MQTT connection 'mqtt_local' already exists",
+      { cmocka_unit_test_setup_teardown(run_signal_expect_error,
+                                        mqtt_run_init,
+                                        mqtt_run_dtor) } },
+
 };
 static char plg_cfg_fname[128];
 
@@ -62,7 +104,7 @@ load_cfg(umplg_mngr_t *m)
     // load plugins configuration
     char *fname = plg_cfg_fname;
     if (strlen(fname) == 0) {
-        fname = plg_cfg_err_list[plg_cfg_id];
+        fname = err_tests[plg_cfg_id].cfg_file;
         do_pause = true;
 
     } else {
@@ -141,14 +183,14 @@ mqtt_run_dtor(void **state)
 
 // dummy connect, receive MQTT PUB message
 static void
-mqtt_test_connect(void **state)
+test_broker_connection(void **state)
 {
     sleep(2);
 }
 
 // check for MQTT PUB message
 static void
-mqtt_test_01(void **state)
+test_mqtt_rx_signal_handler(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -169,7 +211,7 @@ mqtt_test_01(void **state)
 
 
 static void
-mqtt_test_02(void **state)
+test_mqtt_publish_from_lua_via_generic_interface(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -196,7 +238,7 @@ mqtt_test_02(void **state)
 }
 
 static void
-mqtt_test_03(void **state)
+test_mqtt_publish_from_lua_via_submodule_methods(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -226,7 +268,7 @@ mqtt_test_03(void **state)
 }
 
 static void
-mqtt_test_04(void **state)
+test_mqtt_binary_file_upload(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -298,7 +340,7 @@ mqtt_test_04(void **state)
 }
 
 static void
-mqtt_test_cfg_01(void **state)
+run_signal_expect_error(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -325,44 +367,27 @@ mqtt_test_cfg_01(void **state)
 int
 main(int argc, char **argv)
 {
-    const struct CMUnitTest tests[] = { cmocka_unit_test(mqtt_test_connect),
-                                        cmocka_unit_test(mqtt_test_01),
-                                        cmocka_unit_test(mqtt_test_02),
-                                        cmocka_unit_test(mqtt_test_03),
-                                        cmocka_unit_test(mqtt_test_04) };
-
-    const struct CMUnitTest tests_cfg[] = {
-        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
-                                        mqtt_run_init,
-                                        mqtt_run_dtor),
-        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
-                                        mqtt_run_init,
-                                        mqtt_run_dtor),
-        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
-                                        mqtt_run_init,
-                                        mqtt_run_dtor),
-        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
-                                        mqtt_run_init,
-                                        mqtt_run_dtor),
-        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
-                                        mqtt_run_init,
-                                        mqtt_run_dtor),
-        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
-                                        mqtt_run_init,
-                                        mqtt_run_dtor),
-        cmocka_unit_test_setup_teardown(mqtt_test_cfg_01,
-                                        mqtt_run_init,
-                                        mqtt_run_dtor),
-
+    const struct CMUnitTest tests[] = {
+        cmocka_unit_test(test_broker_connection),
+        cmocka_unit_test(test_mqtt_rx_signal_handler),
+        cmocka_unit_test(test_mqtt_publish_from_lua_via_generic_interface),
+        cmocka_unit_test(test_mqtt_publish_from_lua_via_submodule_methods),
+        cmocka_unit_test(test_mqtt_binary_file_upload)
     };
 
     // group 01
     strcpy(plg_cfg_fname, "test/plg_cfg_mqtt.json");
     int r = cmocka_run_group_tests(tests, mqtt_run_init, mqtt_run_dtor);
-    if (r == 0) {
-        // cfg loading, group 02
-        plg_cfg_fname[0] = '\0';
-        r += cmocka_run_group_tests(tests_cfg, NULL, NULL);
+    if (0 == 0) {
+
+        for (int i = 0; i < 7; i++) {
+            plg_cfg_fname[0] = '\0';
+            r +=
+                cmocka_run_group_tests_name(err_tests[i].cfg_error_msg,
+                                            err_tests[i].tests,
+                                            NULL,
+                                            NULL);
+        }
     }
     return r;
 

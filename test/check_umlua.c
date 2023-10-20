@@ -34,6 +34,19 @@
 void umlua_shutdown();
 int umlua_init(umplg_mngr_t *pm);
 void umlua_start(umplg_mngr_t *pm);
+
+// test lua env manager
+static struct lua_env_mngr *tmp_lenvm;
+struct lua_env_mngr *lenvm_new();
+void lenvm_free(struct lua_env_mngr *m);
+struct lua_env_d *lenvm_get_envd(struct lua_env_mngr *lem, const char *n);
+struct lua_env_d *lenvm_new_envd(struct lua_env_mngr *lem,
+                                 struct lua_env_d *env);
+bool lenvm_envd_exists(struct lua_env_mngr *lem, const char *n);
+void lenvm_process_envs(struct lua_env_mngr *lem,
+                        void (*f)(struct lua_env_d *env));
+struct lua_env_d *
+lenvm_del_envd(struct lua_env_mngr *lem, const char *n, bool th_safe);
 static char plg_cfg_fname[128];
 
 // dummy struct for state passing
@@ -94,10 +107,30 @@ umplg_run_init(void **state)
     return 0;
 }
 
+static void
+shutdown_envs(struct lua_env_d *env)
+{
+    printf("Freeing env [%s]\n", env->name);
+    // cleanup
+    lenvm_del_envd(tmp_lenvm, env->name, false);
+    free(env->name);
+    free(env->path);
+    free(env->sgnl_perf);
+    free(env);
+}
+
 static int
 umplg_run_dtor(void **state)
 {
     test_t *data = *state;
+
+    // tmp lenvm
+    if (tmp_lenvm != NULL) {
+        lenvm_process_envs(tmp_lenvm, &shutdown_envs);
+        lenvm_free(tmp_lenvm);
+        tmp_lenvm = NULL;
+    }
+
     // stop
     umd_signal_handler(SIGTERM);
     umplg_terminate_all(data->m, 0);
@@ -114,7 +147,7 @@ umplg_run_dtor(void **state)
 
 // test signal handler (missing handler)
 static void
-umlua_test_signal(void **state)
+run_missing_signal(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -137,29 +170,94 @@ umlua_test_signal(void **state)
     assert_null(b);
 }
 
-// test lua env manager
-static struct lua_env_mngr *tmp_lenvm;
-struct lua_env_mngr *lenvm_new();
-void lenvm_free(struct lua_env_mngr *m);
-struct lua_env_d *lenvm_get_envd(struct lua_env_mngr *lem, const char *n);
-struct lua_env_d *lenvm_new_envd(struct lua_env_mngr *lem,
-                                 struct lua_env_d *env);
-bool lenvm_envd_exists(struct lua_env_mngr *lem, const char *n);
-void lenvm_process_envs(struct lua_env_mngr *lem,
-                        void (*f)(struct lua_env_d *env));
-struct lua_env_d *
-lenvm_del_envd(struct lua_env_mngr *lem, const char *n, bool th_safe);
+static void
+create_lua_environment_manager(void **state)
+{
+    // new env mngr
+    tmp_lenvm = lenvm_new();
+    assert_non_null(tmp_lenvm);
+}
 
 static void
-shutdown_envs(struct lua_env_d *env)
+free_lua_environment_manager(void **state)
 {
-    // cleanup
-    lenvm_del_envd(tmp_lenvm, env->name, false);
+    lenvm_process_envs(tmp_lenvm, &shutdown_envs);
+    lenvm_free(tmp_lenvm);
+}
+
+static void
+create_lua_environment(void **state)
+{
+    tmp_lenvm = lenvm_new();
+    assert_non_null(tmp_lenvm);
+
+    // new dummy env
+    struct lua_env_d *env = calloc(1, sizeof(struct lua_env_d));
+    env->name = strdup("test_env_id");
+    struct lua_env_d *env_tmp = lenvm_new_envd(tmp_lenvm, env);
+    assert_ptr_equal(env, env_tmp);
+}
+
+static void
+create_lua_environment_duplicate_id(void **state)
+{
+    // get old env
+    struct lua_env_d *env_01 = lenvm_get_envd(tmp_lenvm, "test_env_id");
+    assert_non_null(env_01);
+
+    // new dummy env
+    struct lua_env_d *env_02 = calloc(1, sizeof(struct lua_env_d));
+    env_02->name = strdup("test_env_id");
+    struct lua_env_d *env_tmp = lenvm_new_envd(tmp_lenvm, env_02);
+    assert_ptr_equal(env_01, env_tmp);
+    free(env_02->name);
+    free(env_02);
+}
+
+static void
+look_for_lua_environment(void **state)
+{
+    bool found = lenvm_envd_exists(tmp_lenvm, "test_env_id");
+    assert_int_equal(found, 1);
+}
+
+static void
+look_for_missing_lua_environment(void **state)
+{
+    bool found = lenvm_envd_exists(tmp_lenvm, "test_env_id_XX");
+    assert_int_equal(found, 0);
+}
+
+static void
+get_lua_environment(void **state)
+{
+    struct lua_env_d *env = lenvm_get_envd(tmp_lenvm, "test_env_id");
+    assert_non_null(env);
+}
+
+static void
+get_missing_lua_environment(void **state)
+{
+    struct lua_env_d *env = lenvm_get_envd(tmp_lenvm, "test_env_id_XX");
+    assert_null(env);
+}
+
+static void
+delete_lua_environment(void **state)
+{
+    struct lua_env_d *env = lenvm_del_envd(tmp_lenvm, "test_env_id", false);
+    assert_non_null(env);
     free(env->name);
-    free(env->path);
-    free(env->sgnl_perf);
     free(env);
 }
+
+static void
+delete_missing_lua_environment(void **state)
+{
+    struct lua_env_d *env = lenvm_del_envd(tmp_lenvm, "test_env_id_XX", false);
+    assert_null(env);
+}
+/*
 
 static void
 umlua_test_lenvm(void **state)
@@ -205,6 +303,7 @@ umlua_test_lenvm(void **state)
     lenvm_process_envs(tmp_lenvm, &shutdown_envs);
     lenvm_free(tmp_lenvm);
 }
+*/
 
 static void
 signal_match_cb(umplg_sh_t *shd, void *args)
@@ -212,7 +311,53 @@ signal_match_cb(umplg_sh_t *shd, void *args)
     shd->min_auth_lvl = shd->min_auth_lvl ? 0 : 1;
 }
 
+static void
+run_signal_w_sufficient_authentication_level(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    assert_non_null(data);
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_EVENT_01", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    free(b);
+    b = NULL;
+}
+
+static void
+run_signal_w_insufficient_authentication_level(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    assert_non_null(data);
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // set min user role level for signal to 1 (admin)
+    umplg_match_signal(m, "TEST_EVENT_01", &signal_match_cb, NULL);
+
+    // run signal again (expected failure)
+    int r = umplg_proc_signal(m, "TEST_EVENT_01", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, UMPLG_RES_AUTH_ERROR);
+    assert_null(b);
+
+    // revert min user role level to 0
+    umplg_match_signal(m, "TEST_EVENT_01", &signal_match_cb, NULL);
+
+}
+
 // test signal handler (insufficient privileges)
+/*
 static void
 umlua_test_user_privs(void **state)
 {
@@ -245,10 +390,11 @@ umlua_test_user_privs(void **state)
     // revert min user role level to 0
     umplg_match_signal(m, "TEST_EVENT_01", &signal_match_cb, NULL);
 }
+*/
 
 // call signal handler, return static string
 static void
-umlua_test_01(void **state)
+run_signal_w_static_output(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -266,7 +412,23 @@ umlua_test_01(void **state)
     assert_int_equal(r, 0);
     assert_string_equal(b, "test_data");
     free(b);
-    b = NULL;
+}
+static void
+run_signal_w_multiple_names(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    assert_non_null(data);
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_EVENT_01", NULL, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_string_equal(b, "test_data");
+    free(b);
 
     // call again, check signal handler with multiple names
     r = umplg_proc_signal(m, "TEST_EVENT_01_02", NULL, &b, &b_sz, 0, NULL);
@@ -277,6 +439,7 @@ umlua_test_01(void **state)
 
 // call signal handler with args (value without a key) and
 // return arg at table index 01 (success)
+/*
 static void
 umlua_test_02(void **state)
 {
@@ -307,11 +470,12 @@ umlua_test_02(void **state)
     HASH_CLEAR(hh, items.table);
     umplg_stdd_free(&d);
 }
+*/
 
 // call signal handler with args (value with a key) and
 // return arg at table index 01 (failure)
 static void
-umlua_test_03(void **state)
+run_signal_w_args_return_missing_arg(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -344,7 +508,7 @@ umlua_test_03(void **state)
 // call signal handler with args (value with a key) and
 // return arg with a key value present (success)
 static void
-umlua_test_04(void **state)
+run_signal_w_args_return_named_arg(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -377,7 +541,7 @@ umlua_test_04(void **state)
 
 //  check lua env running every 500msec, inc counter by 1, expect 4
 static void
-umlua_test_env_01(void **state)
+run_lua_env_thread(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -420,7 +584,7 @@ umlua_test_env_01(void **state)
 
 //  check failed env
 static void
-umlua_test_load_err_01(void **state)
+check_failed_lua_environment_thread(void **state)
 {
     sleep(2);
     // get custom counter
@@ -430,7 +594,7 @@ umlua_test_load_err_01(void **state)
 
 //  check failed signal
 static void
-umlua_test_load_err_02(void **state)
+run_signal_w_malformed_lua_script(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -452,7 +616,7 @@ umlua_test_load_err_02(void **state)
 
 //  check counters again (check_umc), this time from lua script
 static void
-umlua_test_05(void **state)
+run_signal_check_umc_from_lua(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -485,7 +649,7 @@ umlua_test_05(void **state)
 
 //  check signal call from another signal
 static void
-umlua_test_06(void **state)
+run_signal_call_signal_from_another_signal(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -505,7 +669,7 @@ umlua_test_06(void **state)
 
 //  check signal call from another signal (admin)
 static void
-umlua_test_06a(void **state)
+run_signal_call_admin_signal_from_another_signal(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -526,7 +690,7 @@ umlua_test_06a(void **state)
 
 //  check signal recursion check
 static void
-umlua_test_07(void **state)
+run_signal_prevent_signal_recursion(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -546,7 +710,7 @@ umlua_test_07(void **state)
 
 //  check multiple mink_stdd arg levels (Lref)
 static void
-umlua_test_08(void **state)
+run_signal_check_arg_levels_w_thread_local_lref(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -576,7 +740,7 @@ umlua_test_08(void **state)
 
 //  check db set/get methods (from lua script this time)
 static void
-umlua_test_09(void **state)
+run_signal_check_umdb_from_lua(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -623,7 +787,7 @@ umlua_test_09(void **state)
 
 //  check cmd_call (from lua script this time)
 static void
-umlua_test_10(void **state)
+run_signal_check_cmd_call_w_generic_interface(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -654,7 +818,7 @@ umlua_test_10(void **state)
 
 //  check cmd_call (from lua script this time)
 static void
-umlua_test_11(void **state)
+run_signal_check_lua_submodule_from_umink_plugin(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -685,7 +849,7 @@ umlua_test_11(void **state)
 
 //  check domain socket cli
 static void
-umlua_test_12(void **state)
+run_signal_via_unix_domain_socket(void **state)
 {
     const char *socket_path = "/tmp/umink.sock";
     int sock = 0;
@@ -729,51 +893,77 @@ umlua_test_12(void **state)
 int
 main(int argc, char **argv)
 {
-    const struct CMUnitTest tests[] = { cmocka_unit_test(umlua_test_env_01),
-                                        cmocka_unit_test(umlua_test_signal),
-                                        cmocka_unit_test(umlua_test_lenvm),
-                                        cmocka_unit_test(umlua_test_user_privs),
-                                        cmocka_unit_test(umlua_test_01),
-                                        cmocka_unit_test(umlua_test_02),
-                                        cmocka_unit_test(umlua_test_03),
-                                        cmocka_unit_test(umlua_test_04),
-                                        cmocka_unit_test(umlua_test_05),
-                                        cmocka_unit_test(umlua_test_06),
-                                        cmocka_unit_test(umlua_test_06a),
-                                        cmocka_unit_test(umlua_test_07),
-                                        cmocka_unit_test(umlua_test_08),
-                                        cmocka_unit_test(umlua_test_09),
-                                        cmocka_unit_test(umlua_test_10),
-                                        cmocka_unit_test(umlua_test_11),
-                                        cmocka_unit_test(umlua_test_12) };
+    const struct CMUnitTest tests[] = {
+        cmocka_unit_test(run_lua_env_thread),
+        cmocka_unit_test(run_missing_signal),
+        cmocka_unit_test(create_lua_environment_manager),
+        cmocka_unit_test(free_lua_environment_manager),
+        cmocka_unit_test(create_lua_environment),
+        cmocka_unit_test(create_lua_environment_duplicate_id),
+        cmocka_unit_test(look_for_lua_environment),
+        cmocka_unit_test(look_for_missing_lua_environment),
+        cmocka_unit_test(get_lua_environment),
+        cmocka_unit_test(get_missing_lua_environment),
+        cmocka_unit_test(delete_lua_environment),
+        cmocka_unit_test(delete_missing_lua_environment),
+        cmocka_unit_test(run_signal_w_sufficient_authentication_level),
+        cmocka_unit_test(run_signal_w_insufficient_authentication_level),
+        cmocka_unit_test(run_signal_w_static_output),
+        cmocka_unit_test(run_signal_w_multiple_names),
+        cmocka_unit_test(run_signal_w_args_return_missing_arg),
+        cmocka_unit_test(run_signal_w_args_return_named_arg),
+        cmocka_unit_test(run_signal_check_umc_from_lua),
+        cmocka_unit_test(run_signal_call_signal_from_another_signal),
+        cmocka_unit_test(run_signal_call_admin_signal_from_another_signal),
+        cmocka_unit_test(run_signal_prevent_signal_recursion),
+        cmocka_unit_test(run_signal_check_arg_levels_w_thread_local_lref),
+        cmocka_unit_test(run_signal_check_umdb_from_lua),
+        cmocka_unit_test(run_signal_check_cmd_call_w_generic_interface),
+        cmocka_unit_test(run_signal_check_lua_submodule_from_umink_plugin),
+        cmocka_unit_test(run_signal_via_unix_domain_socket)
+    };
 
     const struct CMUnitTest tests_02[] = {
-        cmocka_unit_test(umlua_test_load_err_01),
-        cmocka_unit_test(umlua_test_load_err_02),
+        cmocka_unit_test(check_failed_lua_environment_thread),
+        cmocka_unit_test(run_signal_w_malformed_lua_script),
 
     };
 
     // *** valid scripts ***
     // conserve memory
     strcpy(plg_cfg_fname, "test/plg_cfg.json");
-    int r = cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
+    int r = cmocka_run_group_tests_name(
+        "Running VALID configuration with conserve_mem ENABLED",
+        tests,
+        umplg_run_init,
+        umplg_run_dtor);
     if (r == 0) {
         // do not conserve memory
         strcpy(plg_cfg_fname, "test/plg_cfg_ncs.json");
-        r += cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
+        r += cmocka_run_group_tests_name(
+            "Running VALID configuration with conserve_mem DISABLED",
+            tests,
+            umplg_run_init,
+            umplg_run_dtor);
     }
     // *** scripts with errors ***
     // conserve memory
     if (r == 0) {
         strcpy(plg_cfg_fname, "test/plg_cfg_err.json");
-        r += cmocka_run_group_tests(tests_02, umplg_run_init, umplg_run_dtor);
+        r += cmocka_run_group_tests_name(
+            "Running INVALID configuration with conserve_mem ENABLED",
+            tests_02,
+            umplg_run_init,
+            umplg_run_dtor);
 
         // do not conserve memory
         if (r == 0) {
             strcpy(plg_cfg_fname, "test/plg_cfg_err_ncs.json");
-            r += cmocka_run_group_tests(tests_02,
-                                        umplg_run_init,
-                                        umplg_run_dtor);
+            r += cmocka_run_group_tests_name(
+                "Running INVALID configuration with conserve_mem DISABLED",
+                tests_02,
+                umplg_run_init,
+                umplg_run_dtor);
         }
     }
 

@@ -44,7 +44,7 @@ umplg_run_dtor(void **state)
 }
 
 static void
-umd_test_01(void **state)
+create_umd(void **state)
 {
     // get data
     test_t *data = *state;
@@ -65,7 +65,7 @@ umd_test_01(void **state)
 }
 
 static void
-umd_test_02(void **state)
+change_log_level(void **state)
 {
     // get data
     test_t *data = *state;
@@ -85,7 +85,7 @@ kill_thread(void *args)
 }
 
 static void
-umd_test_03(void **state)
+start_daemon_loop(void **state)
 {
     // get data
     test_t *data = *state;
@@ -103,9 +103,9 @@ umd_test_03(void **state)
 int
 main(int argc, char **argv)
 {
-    const struct CMUnitTest tests[] = { cmocka_unit_test(umd_test_01),
-                                        cmocka_unit_test(umd_test_02),
-                                        cmocka_unit_test(umd_test_03) };
+    const struct CMUnitTest tests[] = { cmocka_unit_test(create_umd),
+                                        cmocka_unit_test(change_log_level),
+                                        cmocka_unit_test(start_daemon_loop) };
 
     return cmocka_run_group_tests(tests, umplg_run_init, umplg_run_dtor);
 }
