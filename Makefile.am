@@ -131,7 +131,9 @@ if ENABLE_MQTT
 check_PROGRAMS += check_mqtt
 endif
 
-
+if ENABLE_OPENWRT
+check_PROGRAMS += check_openwrt
+endif
 
 check_LTLIBRARIES = check_umplg_plugin_01.la \
                     check_umplg_plugin_02.la
@@ -144,6 +146,10 @@ TESTS = check_umdb \
 
 if ENABLE_MQTT
 TESTS += check_mqtt
+endif
+
+if ENABLE_OPENWRT
+TESTS += check_openwrt
 endif
 
 # umlua tester
@@ -261,6 +267,33 @@ check_mqtt_LDADD = -lcmocka \
                    ${SQLITE_LIBS}
 endif
 
+# openwrt tester
+if ENABLE_OPENWRT
+check_openwrt_SOURCES = test/check_openwrt.c \
+                        src/umd/umdaemon.c \
+                        src/utils/umcounters.c \
+                        src/services/sysagent/umlua.c \
+                        src/services/sysagent/umlua_m.c \
+                        src/utils/umdb.c \
+                        src/utils/umink_plugin.c
+check_openwrt_CFLAGS = ${COMMON_INCLUDES} \
+                       ${JSON_C_CFLAGS} \
+                      -DLUA_COMPAT_ALL \
+                      -DLUA_COMPAT_5_1 \
+                      -DLUA_COMPAT_5_2 \
+                      -DLUA_COMPAT_5_3 \
+                      ${LUA_CFLAGS} \
+                      ${ASAN_FLAGS}
+check_openwrt_LDFLAGS = -export-dynamic
+check_openwrt_LDADD = -lcmocka \
+                      ${JSON_C_LIBS} \
+                      ${LUA_LIBS} \
+                      ${SQLITE_LIBS} \
+                      ${UBUS_LIBS} \
+                      ${UBOX_LIBS} \
+                      ${BLOBMSG_JSON_LIBS}
+endif
+
 # cleanup rule
 distclean-local: distclean-ax-prefix-umink-pkg-config-h
 distclean-ax-prefix-umink-pkg-config-h:
@@ -275,4 +308,9 @@ endif
 # mosquitto auth plugin
 if ENABLE_MOSQUITTO_AUTH
 include src/services/sysagent/plugins/mosquitto_auth/Makefile.am
+endif
+
+# OpenWRT support plugin
+if ENABLE_OPENWRT
+include src/services/sysagent/plugins/openwrt/Makefile.am
 endif

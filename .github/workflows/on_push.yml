@@ -40,10 +40,22 @@ jobs:
           libcmocka-dev \
           libasan5 \
           iproute2 \
+          cmake \
           libxml2-utils &&
           sudo ln -s /usr/lib/x86_64-linux-gnu/pkgconfig/lua-5.3.pc \
           /usr/lib/x86_64-linux-gnu/pkgconfig/lua.pc &&
           pip3 install 'gcovr == 6'
+      - name: libubox
+        run: |
+          git clone https://github.com/openwrt/libubox.git
+          cd libubox && mkdir build && cd build
+          cmake -DBUILD_LUA=off .. && sudo make install
+      - name: ubus
+        run: |
+          git clone https://github.com/openwrt/ubus.git
+          cd ubus && mkdir ubus && cd ubus
+          cmake -DBUILD_LUA=off ..
+          sudo make install
       - name: mosquitto
         run: |
           mosquitto_passwd -c -b /tmp/pwdfile user password
@@ -61,10 +73,16 @@ jobs:
           export ASAN_OPTIONS=verify_asan_link_order=0
           ./autogen.sh
           ./configure --enable-mqtt \
-                      --enable-mosquitto-auth
+                      --enable-mosquitto-auth \
+                      --enable-openwrt
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR  }} \
+          make clean all
+      - name: run unit tests
+        run: |
           rm -f /tmp/tmp_file_uuid
           bash ./test/test_bin_upload.sh &
-          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR  }} make clean all check
+          sudo LD_LIBRARY_PATH=/usr/local/lib /usr/local/sbin/ubusd &
+          sudo LD_LIBRARY_PATH=/usr/local/lib make check
       - name: generate coverage data
         run: |
           mkdir coverage-dir

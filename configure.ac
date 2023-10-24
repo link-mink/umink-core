@@ -154,6 +154,31 @@ if test "x$enable_coap" != "xno"; then
     PKG_CHECK_MODULES([COAP], [libcoap-3], [], [AC_MSG_ERROR([libcoap-3 not found!])])
 fi
 
+# /***********/
+# /* OpenWRT */
+# /***********/
+AC_ARG_ENABLE(openwrt,
+              [AS_HELP_STRING([--enable-openwrt], [Enable OpenWRT support [default=no]])],,
+              [enable_openwrt=no])
+AM_CONDITIONAL(ENABLE_OPENWRT, test "x$enable_openwrt" = "xyes")
+if test "x$enable_openwrt" != "xno"; then
+    AC_DEFINE([ENABLE_OPENWRT], [1], [Enable OpenWRT support])
+    AC_CHECK_LIB([ubus],
+                 [ubus_connect],
+                 [AC_SUBST([UBUS_LIBS], ["-lubus"])],
+                 [AC_MSG_ERROR([libubus not found!])])
+
+    AC_CHECK_LIB([ubox],
+                 [blob_buf_init],
+                 [AC_SUBST([UBOX_LIBS], ["-lubox"])],
+                 [AC_MSG_ERROR([libubox not found!])])
+
+    AC_CHECK_LIB([blobmsg_json],
+                 [blobmsg_add_object],
+                 [AC_SUBST([BLOBMSG_JSON_LIBS], ["-lblobmsg_json"])],
+                 [AC_MSG_ERROR([libblobmsg_json not found!])])
+fi
+
 # /****************************/
 # /* Checks for header files. */
 # /****************************/

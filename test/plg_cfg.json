@@ -43,6 +43,15 @@
         ]
       },
       {
+        "name": "TEST_EVENT_03_UBUS",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/test_event_03_ubus.lua",
+        "events": [
+          "TEST_EVENT_03_UBUS"
+        ]
+      },
+      {
         "name": "TEST_EVENT_04",
         "auto_start": false,
         "interval": 0,
