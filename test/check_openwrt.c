@@ -147,7 +147,6 @@ call_list_signals(void **state)
     assert_int_equal(r, 0);
 
     blob_buf_init(&b, 0);
-    blobmsg_add_u32(&b, "id", id);
     char *out_str = NULL;
 
     r = ubus_invoke(ctx,
@@ -195,7 +194,6 @@ call_run_signal_w_static_output(void **state)
     assert_int_equal(r, 0);
 
     blob_buf_init(&b, 0);
-    blobmsg_add_u32(&b, "id", id);
     blobmsg_add_json_from_string(&b, "{\"id\": \"TEST_EVENT_01\"}");
     char *out_str = NULL;
 
@@ -226,7 +224,6 @@ call_run_missing_signal(void **state)
     assert_int_equal(r, 0);
 
     blob_buf_init(&b, 0);
-    blobmsg_add_u32(&b, "id", id);
     blobmsg_add_json_from_string(&b, "{\"id\": \"TEST_EVENT_XX\"}");
     char *out_str = NULL;
 
@@ -257,7 +254,6 @@ call_run_signal_w_args_return_named_arg(void **state)
     assert_int_equal(r, 0);
 
     blob_buf_init(&b, 0);
-    blobmsg_add_u32(&b, "id", id);
     blobmsg_add_json_from_string(
         &b,
         "{\"id\": \"TEST_EVENT_03_UBUS\", "
@@ -291,7 +287,6 @@ call_run_signal_w_id_missing(void **state)
     assert_int_equal(r, 0);
 
     blob_buf_init(&b, 0);
-    blobmsg_add_u32(&b, "id", id);
     char *out_str = NULL;
 
     r = ubus_invoke(ctx,
@@ -327,7 +322,6 @@ call_run_signal_w_sufficient_authentication_level(void **state)
     assert_int_equal(r, 0);
 
     blob_buf_init(&b, 0);
-    blobmsg_add_u32(&b, "id", id);
     blobmsg_add_json_from_string(
         &b,
         "{\"id\": \"TEST_EVENT_01\", \"auth\": \"{\\\"flags\\\": 0}\"}");
@@ -368,7 +362,6 @@ call_run_signal_w_insufficient_authentication_level(void **state)
     assert_int_equal(r, 0);
 
     blob_buf_init(&b, 0);
-    blobmsg_add_u32(&b, "id", id);
     blobmsg_add_json_from_string(
         &b,
         "{\"id\": \"TEST_EVENT_01\", \"auth\": \"{\\\"flags\\\": 0}\"}");
