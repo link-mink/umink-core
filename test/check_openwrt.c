@@ -127,61 +127,7 @@ run_dtor(void **state)
 }
 
 static void
-list_signals_cb(struct ubus_request *req, int type, struct blob_attr *msg)
-{
-    // ubus output
-    char *str = blobmsg_format_json(msg, true);
-    assert_non_null(str);
-
-    // add result
-    char **out_str = (char **)req->priv;
-    *out_str = str;
-}
-
-static void
-run_signal_w_static_output_cb(struct ubus_request *req,
-                              int type,
-                              struct blob_attr *msg)
-{
-    // ubus output
-    char *str = blobmsg_format_json(msg, true);
-    assert_non_null(str);
-
-    // add result
-    char **out_str = (char **)req->priv;
-    *out_str = str;
-}
-
-static void
-run_missing_signal_cb(struct ubus_request *req, int type, struct blob_attr *msg)
-{
-    // ubus output
-    char *str = blobmsg_format_json(msg, true);
-    assert_non_null(str);
-
-    // add result
-    char **out_str = (char **)req->priv;
-    *out_str = str;
-}
-
-static void
-run_signal_w_args_return_named_arg_cb(struct ubus_request *req,
-                                      int type,
-                                      struct blob_attr *msg)
-{
-    // ubus output
-    char *str = blobmsg_format_json(msg, true);
-    assert_non_null(str);
-
-    // add result
-    char **out_str = (char **)req->priv;
-    *out_str = str;
-}
-
-static void
-run_signal_w_id_missing_cb(struct ubus_request *req,
-                           int type,
-                           struct blob_attr *msg)
+ubus_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 {
     // ubus output
     char *str = blobmsg_format_json(msg, true);
@@ -209,7 +155,7 @@ call_list_signals(void **state)
                     id,
                     "list_signals",
                     b.head,
-                    list_signals_cb,
+                    ubus_cb,
                     &out_str,
                     2000);
     assert_int_equal(r, 0);
@@ -258,7 +204,7 @@ call_run_signal_w_static_output(void **state)
                     id,
                     "run_signal",
                     b.head,
-                    run_signal_w_static_output_cb,
+                    ubus_cb,
                     &out_str,
                     2000);
     assert_int_equal(r, 0);
@@ -289,7 +235,7 @@ call_run_missing_signal(void **state)
                     id,
                     "run_signal",
                     b.head,
-                    run_missing_signal_cb,
+                    ubus_cb,
                     &out_str,
                     2000);
     assert_int_equal(r, 0);
@@ -323,7 +269,7 @@ call_run_signal_w_args_return_named_arg(void **state)
                     id,
                     "run_signal",
                     b.head,
-                    run_signal_w_args_return_named_arg_cb,
+                    ubus_cb,
                     &out_str,
                     2000);
     assert_int_equal(r, 0);
@@ -353,7 +299,7 @@ call_run_signal_w_id_missing(void **state)
                     id,
                     "run_signal",
                     b.head,
-                    run_signal_w_id_missing_cb,
+                    ubus_cb,
                     &out_str,
                     2000);
     assert_int_equal(r, 0);
@@ -366,6 +312,87 @@ call_run_signal_w_id_missing(void **state)
     free(out_str);
 }
 
+static void
+signal_match_cb(umplg_sh_t *shd, void *args)
+{
+    shd->min_auth_lvl = shd->min_auth_lvl ? 0 : 1;
+}
+
+static void
+call_run_signal_w_sufficient_authentication_level(void **state)
+{
+    uint32_t id;
+
+    // look for umink object
+    int r = ubus_lookup_id(ctx, "umink", &id);
+    assert_int_equal(r, 0);
+
+    blob_buf_init(&b, 0);
+    blobmsg_add_u32(&b, "id", id);
+    blobmsg_add_json_from_string(
+        &b,
+        "{\"id\": \"TEST_EVENT_01\", \"auth\": \"{\\\"flags\\\": 0}\"}");
+    char *out_str = NULL;
+
+    r = ubus_invoke(ctx,
+                    id,
+                    "run_signal",
+                    b.head,
+                    ubus_cb,
+                    &out_str,
+                    2000);
+    assert_int_equal(r, 0);
+    assert_non_null(out_str);
+
+    // get result from ubus call
+    assert_string_equal(out_str, "{\"result\":\"test_data\"}");
+
+    // free
+    free(out_str);
+}
+
+static void
+call_run_signal_w_insufficient_authentication_level(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    assert_non_null(data);
+    umplg_mngr_t *m = data->m;
+
+    uint32_t id;
+
+    // set min user role level for signal to 1 (admin)
+    umplg_match_signal(m, "TEST_EVENT_01", &signal_match_cb, NULL);
+
+    // look for umink object
+    int r = ubus_lookup_id(ctx, "umink", &id);
+    assert_int_equal(r, 0);
+
+    blob_buf_init(&b, 0);
+    blobmsg_add_u32(&b, "id", id);
+    blobmsg_add_json_from_string(
+        &b,
+        "{\"id\": \"TEST_EVENT_01\", \"auth\": \"{\\\"flags\\\": 0}\"}");
+    char *out_str = NULL;
+
+    r = ubus_invoke(ctx,
+                    id,
+                    "run_signal",
+                    b.head,
+                    ubus_cb,
+                    &out_str,
+                    2000);
+    assert_int_equal(r, 0);
+    assert_non_null(out_str);
+
+    // get result from ubus call
+    assert_string_equal(out_str, "{\"result\":\"authentication error\"}");
+
+    // free
+    free(out_str);
+}
+
+
 int
 main(int argc, char **argv)
 {
@@ -377,6 +404,8 @@ main(int argc, char **argv)
         cmocka_unit_test(call_run_missing_signal),
         cmocka_unit_test(call_run_signal_w_id_missing),
         cmocka_unit_test(call_run_signal_w_args_return_named_arg),
+        cmocka_unit_test(call_run_signal_w_sufficient_authentication_level),
+        cmocka_unit_test(call_run_signal_w_insufficient_authentication_level),
     };
 
     int r = cmocka_run_group_tests(tests, run_init, run_dtor);

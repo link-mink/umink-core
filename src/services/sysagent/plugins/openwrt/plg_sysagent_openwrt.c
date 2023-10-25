@@ -17,6 +17,7 @@
 #include <umdaemon.h>
 #include <time.h>
 #include <json_object.h>
+#include <json_tokener.h>
 #include <spscq.h>
 #include <unistd.h>
 #include <errno.h>
@@ -54,14 +55,15 @@ static const struct blobmsg_policy list_signals_policy[] = {};
 enum {
     RUN_SIGNAL_ID,
     RUN_SIGNAL_ARGS,
+    RUN_SIGNAL_AUTH,
     __RUN_SIGNAL_MAX
 };
 
 // run_signal policiy
 static const struct blobmsg_policy run_signal_policy[] = {
     [RUN_SIGNAL_ID] = { .name = "id", .type = BLOBMSG_TYPE_STRING },
-    [RUN_SIGNAL_ARGS] = { .name = "args", .type = BLOBMSG_TYPE_STRING }
-
+    [RUN_SIGNAL_ARGS] = { .name = "args", .type = BLOBMSG_TYPE_STRING },
+    [RUN_SIGNAL_AUTH] = { .name = "auth", .type = BLOBMSG_TYPE_STRING }
 };
 
 // match umsignal callback
@@ -101,14 +103,26 @@ run_signal(struct ubus_context *ctx,
 
     if (tb[RUN_SIGNAL_ID] != NULL) {
         // id and args
-        char *id = strdup(blobmsg_get_string(tb[RUN_SIGNAL_ID]));
-        char *args = NULL;
+        char *id = blobmsg_get_string(tb[RUN_SIGNAL_ID]);
+        char *args = "";
+        char *auth = "";
+        int uflags = 0;
         // check args
         if (tb[RUN_SIGNAL_ARGS] != NULL) {
-            args = strdup(blobmsg_get_string(tb[RUN_SIGNAL_ARGS]));
-
-        } else {
-            args = strdup("");
+            args = blobmsg_get_string(tb[RUN_SIGNAL_ARGS]);
+        }
+        // check auth
+        if (tb[RUN_SIGNAL_AUTH] != NULL) {
+            auth = blobmsg_get_string(tb[RUN_SIGNAL_AUTH]);
+            // check auth (already checked for errors)
+            if (auth != NULL) {
+                json_object *j = json_tokener_parse(auth);
+                if (j != NULL) {
+                    json_object *j_usr = json_object_object_get(j, "flags");
+                    uflags = json_object_get_int(j_usr);
+                    json_object_put(j);
+                }
+            }
         }
 
         // output buffer
@@ -119,7 +133,7 @@ run_signal(struct ubus_context *ctx,
         umplg_data_std_t e_d = { .items = NULL };
         umplg_data_std_items_t items = { .table = NULL };
         umplg_data_std_item_t item = { .name = "", .value = args };
-        umplg_data_std_item_t auth_item = { .name = "", .value = "" };
+        umplg_data_std_item_t auth_item = { .name = "", .value = auth };
         // init std data
         umplg_stdd_init(&e_d);
         umplg_stdd_item_add(&items, &item);
@@ -127,7 +141,7 @@ run_signal(struct ubus_context *ctx,
         umplg_stdd_items_add(&e_d, &items);
 
         // run signal (set)
-        int r = umplg_proc_signal(umplgm, id,  &e_d, &buff, &b_sz, 0, NULL);
+        int r = umplg_proc_signal(umplgm, id, &e_d, &buff, &b_sz, uflags, NULL);
 
         switch (r) {
             case UMPLG_RES_SUCCESS:
@@ -151,8 +165,6 @@ run_signal(struct ubus_context *ctx,
         HASH_CLEAR(hh, items.table);
         umplg_stdd_free(&e_d);
         free(buff);
-        free(id);
-        free(args);
 
     // missing args
     } else {
