@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     name: check conventional commit compliance
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Conventional commit check
@@ -22,7 +22,7 @@ jobs:
     env:
       BUILD_WRAPPER_OUT_DIR: build_wrapper_out
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Install umINK dependencies
