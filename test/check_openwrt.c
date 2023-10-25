@@ -101,7 +101,6 @@ run_init(void **state)
     // connect to ubus
     ctx = ubus_connect(NULL);
     assert_non_null(ctx);
-    ubus_add_uloop(ctx);
 
     *state = data;
 
