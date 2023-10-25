@@ -257,54 +257,6 @@ delete_missing_lua_environment(void **state)
     struct lua_env_d *env = lenvm_del_envd(tmp_lenvm, "test_env_id_XX", false);
     assert_null(env);
 }
-/*
-
-static void
-umlua_test_lenvm(void **state)
-{
-    // new env mngr
-    tmp_lenvm = lenvm_new();
-    assert_non_null(tmp_lenvm);
-
-    // new dummy env
-    struct lua_env_d *env = calloc(1, sizeof(struct lua_env_d));
-    env->name = strdup("test_env_id");
-    struct lua_env_d *env_tmp = lenvm_new_envd(tmp_lenvm, env);
-    assert_ptr_equal(env, env_tmp);
-    // add existing id, expect previous one to be returned
-    struct lua_env_d *env_tmp_02 = calloc(1, sizeof(struct lua_env_d));
-    env_tmp_02->name = strdup("test_env_id");
-    env_tmp = lenvm_new_envd(tmp_lenvm, env);
-    assert_ptr_equal(env, env_tmp);
-    free(env_tmp_02->name);
-    free(env_tmp_02);
-
-    // exists
-    bool found = lenvm_envd_exists(tmp_lenvm, "test_env_id");
-    assert_int_equal(found, 1);
-
-    // get
-    env = lenvm_get_envd(tmp_lenvm, "test_env_id");
-    assert_non_null(env);
-    env = lenvm_get_envd(tmp_lenvm, "test_env_id_XX");
-    assert_null(env);
-
-    // doesn't exist
-    found = lenvm_envd_exists(tmp_lenvm, "test_env_id_XX");
-    assert_int_equal(found, 0);
-
-    // del missing env
-    env = lenvm_del_envd(tmp_lenvm, "test_env_id_XX", false);
-    assert_null(env);
-    env = lenvm_del_envd(tmp_lenvm, "test_env_id_XX", true);
-    assert_null(env);
-
-    // free
-    lenvm_process_envs(tmp_lenvm, &shutdown_envs);
-    lenvm_free(tmp_lenvm);
-}
-*/
-
 static void
 signal_match_cb(umplg_sh_t *shd, void *args)
 {
@@ -356,42 +308,6 @@ run_signal_w_insufficient_authentication_level(void **state)
 
 }
 
-// test signal handler (insufficient privileges)
-/*
-static void
-umlua_test_user_privs(void **state)
-{
-    // get pm
-    test_t *data = *state;
-    assert_non_null(data);
-    umplg_mngr_t *m = data->m;
-
-    // simulate lua script (create dummy signal)
-
-    // output buffer
-    char *b = NULL;
-    size_t b_sz = 0;
-
-    // run signal
-    int r = umplg_proc_signal(m, "TEST_EVENT_01", NULL, &b, &b_sz, 0, NULL);
-    assert_int_equal(r, 0);
-    assert_non_null(b);
-    free(b);
-    b = NULL;
-
-    // set min user role level for signal to 1 (admin)
-    umplg_match_signal(m, "TEST_EVENT_01", &signal_match_cb, NULL);
-
-    // run signal again (expected failure)
-    r = umplg_proc_signal(m, "TEST_EVENT_01", NULL, &b, &b_sz, 0, NULL);
-    assert_int_equal(r, UMPLG_RES_AUTH_ERROR);
-    assert_null(b);
-
-    // revert min user role level to 0
-    umplg_match_signal(m, "TEST_EVENT_01", &signal_match_cb, NULL);
-}
-*/
-
 // call signal handler, return static string
 static void
 run_signal_w_static_output(void **state)
@@ -436,41 +352,6 @@ run_signal_w_multiple_names(void **state)
     assert_string_equal(b, "test_data");
     free(b);
 }
-
-// call signal handler with args (value without a key) and
-// return arg at table index 01 (success)
-/*
-static void
-umlua_test_02(void **state)
-{
-    // get pm
-    test_t *data = *state;
-    assert_non_null(data);
-    umplg_mngr_t *m = data->m;
-
-    // simulate lua script (create dummy signal)
-
-    // input data
-    umplg_data_std_t d = { .items = NULL };
-    umplg_stdd_init(&d);
-    umplg_data_std_items_t items = { .table = NULL };
-    umplg_data_std_item_t item_test = { .name = "", .value = "test_arg_data" };
-    umplg_stdd_item_add(&items, &item_test);
-    umplg_stdd_items_add(&d, &items);
-
-    // output buffer
-    char *b = NULL;
-    size_t b_sz = 0;
-
-    // run signal
-    int r = umplg_proc_signal(m, "TEST_EVENT_02", &d, &b, &b_sz, 0, NULL);
-    assert_int_equal(r, 0);
-    assert_string_equal(b, "test_arg_data");
-    free(b);
-    HASH_CLEAR(hh, items.table);
-    umplg_stdd_free(&d);
-}
-*/
 
 // call signal handler with args (value with a key) and
 // return arg at table index 01 (failure)
