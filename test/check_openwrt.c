@@ -84,6 +84,7 @@ run_init(void **state)
     data->umd = umd_create("test_id", "test_type");
     data->m = umplg_new_mngr();
     data->umd->perf = umc_new_ctx();
+    *state = data;
 
     // load dummy cfg
     load_cfg(data->m);
@@ -101,8 +102,6 @@ run_init(void **state)
     // connect to ubus
     ctx = ubus_connect(NULL);
     assert_non_null(ctx);
-
-    *state = data;
 
     return 0;
 }
@@ -146,13 +145,12 @@ call_list_signals(void **state)
     int r = ubus_lookup_id(ctx, "umink", &id);
     assert_int_equal(r, 0);
 
-    blob_buf_init(&b, 0);
     char *out_str = NULL;
 
     r = ubus_invoke(ctx,
                     id,
                     "list_signals",
-                    b.head,
+                    NULL,
                     ubus_cb,
                     &out_str,
                     2000);
