@@ -35,14 +35,6 @@ LT_INIT
 # save libs
 COMMON_LIBS=$LIBS
 
-# /*********************/
-# /* enable DEBUG mode */
-# /*********************/
-AC_ARG_ENABLE(debug,
-              [AS_HELP_STRING([--enable-debug], [enable DEBUG mode [default=no]])],,
-              [enable_debug=no])
-AM_CONDITIONAL(ENABLE_DEBUG, test "x$enable_debug" = "xyes")
-
 # /***********************************/
 # /* disable RT threads (SCHED_FIFO) */
 # /***********************************/

@@ -9,18 +9,11 @@
 # aclocal m4 dir
 ACLOCAL_AMFLAGS = -I m4
 
-# check for debug mode [--enable-debug]
-if ENABLE_DEBUG
-CFLAGS += -O${OLEVEL} -g
-else
-CFLAGS += -O${OLEVEL}
-endif
-
 # compiler and linkerflags
 COMMON_INCLUDES = -I. -Isrc/include
 
 # asan flags
-ASAN_FLAGS = -fsanitize=address \
+ASAN_FLAGS = -fsanitize=address,undefined \
              -fno-omit-frame-pointer \
              -fprofile-abs-path \
              -fprofile-arcs \
