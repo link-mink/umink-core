@@ -27,8 +27,10 @@ jobs:
           fetch-depth: 0
       - name: Install umINK dependencies
         run: |
-          sudo apt-get update && \
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
           sudo apt-get install -y \
+          gcc-13 \
           gperf \
           libmosquitto-dev \
           mosquitto-dev \
@@ -41,20 +43,21 @@ jobs:
           libasan5 \
           iproute2 \
           cmake \
-          libxml2-utils &&
+          libxml2-utils
           sudo ln -s /usr/lib/x86_64-linux-gnu/pkgconfig/lua-5.3.pc \
-          /usr/lib/x86_64-linux-gnu/pkgconfig/lua.pc &&
+          /usr/lib/x86_64-linux-gnu/pkgconfig/lua.pc
           pip3 install 'gcovr == 6'
+          sudo apt-get remove -y gcc-11
       - name: libubox
         run: |
           git clone https://github.com/openwrt/libubox.git
           cd libubox && mkdir build && cd build
-          cmake -DBUILD_LUA=off .. && sudo make install
+          CC=gcc-13 cmake -DBUILD_LUA=off .. && sudo make install
       - name: ubus
         run: |
           git clone https://github.com/openwrt/ubus.git
           cd ubus && mkdir ubus && cd ubus
-          cmake -DBUILD_LUA=off ..
+          CC=gcc-13 cmake -DBUILD_LUA=off ..
           sudo make install
       - name: mosquitto
         run: |
@@ -71,6 +74,7 @@ jobs:
       - name: Run build-wrapper
         run: |
           export ASAN_OPTIONS=verify_asan_link_order=0
+          export CC=gcc-13
           ./autogen.sh
           ./configure --enable-mqtt \
                       --enable-mosquitto-auth \
@@ -82,11 +86,12 @@ jobs:
           rm -f /tmp/tmp_file_uuid
           bash ./test/test_bin_upload.sh &
           sudo LD_LIBRARY_PATH=/usr/local/lib /usr/local/sbin/ubusd &
-          sudo LD_LIBRARY_PATH=/usr/local/lib make check
+          sudo LD_LIBRARY_PATH=/usr/local/lib CC=gcc-13 make check
       - name: generate coverage data
         run: |
           mkdir coverage-dir
           cd coverage-dir
+          sudo ln -s /usr/bin/gcov-13 /usr/bin/gcov
           gcovr --sonarqube coverage.xml -r ..
           cd ..
       - name: Run sonar-scanner
