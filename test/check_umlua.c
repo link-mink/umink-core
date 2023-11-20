@@ -475,7 +475,7 @@ check_failed_lua_environment_thread(void **state)
 
 //  check failed signal
 static void
-run_signal_w_malformed_lua_script(void **state)
+run_signal_w_malformed_lua_script_nil_value(void **state)
 {
     // get pm
     test_t *data = *state;
@@ -485,14 +485,56 @@ run_signal_w_malformed_lua_script(void **state)
     char *b = NULL;
     size_t b_sz = 0;
 
+    // input data
+    umplg_data_std_t d = { .items = NULL };
+    umplg_stdd_init(&d);
+    umplg_data_std_items_t items = { .table = NULL };
+    umplg_data_std_item_t item_test = { .name = "", .value = "TEST_EVENT_01" };
+    umplg_stdd_item_add(&items, &item_test);
+    umplg_stdd_items_add(&d, &items);
+
     // run signal
-    int r = umplg_proc_signal(m, "TEST_EVENT_02", NULL, &b, &b_sz, 0, NULL);
+    int r = umplg_proc_signal(m, "TEST_EVENT_02", &d, &b, &b_sz, 0, NULL);
     assert_int_equal(r, 0);
     assert_non_null(b);
-    assert_string_equal(b,
-                        "test/test_event_01_err.lua:1: attempt to call a nil "
-                        "value (global 'rsdfeturn')");
+    assert_string_equal(
+        b,
+        "0.0:test/test_event_01_err.lua:1: attempt to call a nil "
+        "value (global 'rsdfeturn')");
     free(b);
+    HASH_CLEAR(hh, items.table);
+    umplg_stdd_free(&d);
+}
+
+//  check failed signal
+static void
+run_signal_w_malformed_lua_script_syntax(void **state)
+{
+    // get pm
+    test_t *data = *state;
+    umplg_mngr_t *m = data->m;
+
+    // output buffer
+    char *b = NULL;
+    size_t b_sz = 0;
+
+    // input data
+    umplg_data_std_t d = { .items = NULL };
+    umplg_stdd_init(&d);
+    umplg_data_std_items_t items = { .table = NULL };
+    umplg_data_std_item_t item_test = { .name = "",
+                                        .value = "TEST_EVENT_01_SYNTAX_ERR" };
+    umplg_stdd_item_add(&items, &item_test);
+    umplg_stdd_items_add(&d, &items);
+
+    // run signal
+    int r = umplg_proc_signal(m, "TEST_EVENT_02", &d, &b, &b_sz, 0, NULL);
+    assert_int_equal(r, 0);
+    assert_non_null(b);
+    assert_string_equal(b, "4.0:");
+    free(b);
+    HASH_CLEAR(hh, items.table);
+    umplg_stdd_free(&d);
 }
 
 //  check counters again (check_umc), this time from lua script
@@ -806,7 +848,8 @@ main(int argc, char **argv)
 
     const struct CMUnitTest tests_02[] = {
         cmocka_unit_test(check_failed_lua_environment_thread),
-        cmocka_unit_test(run_signal_w_malformed_lua_script),
+        cmocka_unit_test(run_signal_w_malformed_lua_script_nil_value),
+        cmocka_unit_test(run_signal_w_malformed_lua_script_syntax),
 
     };
 

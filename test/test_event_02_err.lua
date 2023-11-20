@@ -1,2 +1,3 @@
-local d = M.signal("TEST_EVENT_01")
-return d
+local args = M.get_args()[1][1]
+local d, r = M.signal(args)
+return r .. ":" .. d

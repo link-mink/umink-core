@@ -15,6 +15,15 @@
         ]
       },
       {
+        "name": "TEST_EVENT_01_SYNTAX_ERR",
+        "auto_start": false,
+        "interval": 0,
+        "path": "test/test_event_01_syntax_err.lua",
+        "events": [
+          "TEST_EVENT_01_SYNTAX_ERR"
+        ]
+      },
+      {
         "name": "TEST_EVENT_02",
         "auto_start": false,
         "interval": 0,
@@ -28,6 +37,14 @@
         "auto_start": true,
         "interval": 500,
         "path": "test/test_env_err.lua",
+        "events": [
+        ]
+      },
+      {
+        "name": "TEST_ENV_SYNTAX_ERR",
+        "auto_start": true,
+        "interval": 500,
+        "path": "test/test_env_syntax_err.lua",
         "events": [
         ]
       },

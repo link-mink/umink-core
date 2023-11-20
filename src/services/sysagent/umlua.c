@@ -232,7 +232,7 @@ static int
 lua_env_load_script(struct lua_env_d *env, lua_State *L)
 {
     int r = luaL_loadfile(L, env->path);
-    switch (r) {
+    switch (r) { // GCOVR_EXCL_BR_LINE
     case LUA_ERRSYNTAX:
         umd_log(UMD,
                 UMD_LLT_ERROR,
@@ -258,7 +258,7 @@ lua_env_load_script(struct lua_env_d *env, lua_State *L)
                 "cannot open/read the file");
 
         return 3;
-    // GCOVR_EXCL_END
+    // GCOVR_EXCL_STOP
     default:
         return 0;
     }
@@ -494,7 +494,7 @@ lua_sig_load_script(umplg_sh_t *shd, lua_State *L)
     struct lua_env_d **env = utarray_eltptr(shd->args, 1);
 
     int r = luaL_loadfile(L, (*env)->path);
-    switch (r) {
+    switch (r) { // GCOVR_EXCL_BR_LINE
     case LUA_ERRSYNTAX:
         umd_log(UMD,
                 UMD_LLT_ERROR,
@@ -520,7 +520,7 @@ lua_sig_load_script(umplg_sh_t *shd, lua_State *L)
                 "cannot open/read the file");
 
         return 3;
-    // GCOVR_EXCL_END
+    // GCOVR_EXCL_STOP
     default:
         return 0;
     }
