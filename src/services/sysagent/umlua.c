@@ -241,6 +241,7 @@ lua_env_load_script(struct lua_env_d *env, lua_State *L)
                 "syntax error during pre-compilation");
 
         return 1;
+    // GCOVR_EXCL_START
     case LUA_ERRMEM:
         umd_log(UMD,
                 UMD_LLT_ERROR,
@@ -257,7 +258,7 @@ lua_env_load_script(struct lua_env_d *env, lua_State *L)
                 "cannot open/read the file");
 
         return 3;
-
+    // GCOVR_EXCL_END
     default:
         return 0;
     }
@@ -375,6 +376,7 @@ th_lua_env(void *arg)
                 UMD_LLT_ERROR,
                 "plg_lua: [cannot load Lua environment (%s)]",
                 env->name);
+        lua_close(L);
         return NULL;
     }
 
@@ -501,6 +503,7 @@ lua_sig_load_script(umplg_sh_t *shd, lua_State *L)
                 "syntax error during pre-compilation");
 
         return 1;
+    // GCOVR_EXCL_START
     case LUA_ERRMEM:
         umd_log(UMD,
                 UMD_LLT_ERROR,
@@ -517,7 +520,7 @@ lua_sig_load_script(umplg_sh_t *shd, lua_State *L)
                 "cannot open/read the file");
 
         return 3;
-
+    // GCOVR_EXCL_END
     default:
         return 0;
     }
@@ -683,18 +686,6 @@ lua_sig_hndlr_run(umplg_sh_t *shd,
         return UMPLG_RES_SUCCESS;
     }
 
-    // - inc current thread's signal reference counter
-    // - used for proper signal arguments handling in case of signal recursion
-    ++Lref;
-
-    // set input arguments for this signal(via global registry)
-    lua_pushstring(L, "mink_stdd");
-    lua_gettable(L, LUA_REGISTRYINDEX);
-    lua_pushnumber(L, Lref);
-    lua_pushlightuserdata(L, d_in);
-    lua_settable(L, -3);
-    lua_remove(L, -1);
-
     // load script each time if conserving memory
     if ((*env)->mem.conserve_mem) {
         if (lua_sig_load_script(shd, L) != 0) {
@@ -711,6 +702,18 @@ lua_sig_hndlr_run(umplg_sh_t *shd,
         // remove sig cache table from stack
         lua_remove(L, -2);
     }
+
+    // - inc current thread's signal reference counter
+    // - used for proper signal arguments handling in case of signal recursion
+    ++Lref;
+
+    // set input arguments for this signal(via global registry)
+    lua_pushstring(L, "mink_stdd");
+    lua_gettable(L, LUA_REGISTRYINDEX);
+    lua_pushnumber(L, Lref);
+    lua_pushlightuserdata(L, d_in);
+    lua_settable(L, -3);
+    lua_remove(L, -1);
 
     // get perf counters
     struct perf_d **perf = utarray_eltptr(shd->args, 2);
