@@ -231,38 +231,36 @@ init_mink_lua_module(lua_State *L)
 static int
 lua_env_load_script(struct lua_env_d *env, lua_State *L)
 {
-    // load lua script
-    FILE *f = fopen(env->path, "r");
-    if (f == NULL) {
-        return 1;
-    }
-    if (fseek(f, 0, SEEK_END) < 0) {
-        fclose(f);
-        return 2;
-    }
-    int32_t fsz = ftell(f);
-    if (fsz <= 0) {
-        fclose(f);
-        return 3;
-    }
-
-    char lua_s[fsz + 1];
-    memset(lua_s, 0, fsz + 1);
-    rewind(f);
-    fread(lua_s, fsz, 1, f);
-    fclose(f);
-
-    // load lua script
-    if (luaL_loadstring(L, lua_s)) {
+    int r = luaL_loadfile(L, env->path);
+    switch (r) {
+    case LUA_ERRSYNTAX:
         umd_log(UMD,
                 UMD_LLT_ERROR,
                 "plg_lua: [cannot load Lua environment (%s)]:%s",
                 env->name,
-                lua_tostring(L, -1));
-        return 4;
-    }
+                "syntax error during pre-compilation");
 
-    return 0;
+        return 1;
+    case LUA_ERRMEM:
+        umd_log(UMD,
+                UMD_LLT_ERROR,
+                "plg_lua: [cannot load Lua environment (%s)]:%s",
+                env->name,
+                "memory allocation error");
+
+        return 2;
+    case LUA_ERRFILE:
+        umd_log(UMD,
+                UMD_LLT_ERROR,
+                "plg_lua: [cannot load Lua environment (%s)]:%s",
+                env->name,
+                "cannot open/read the file");
+
+        return 3;
+
+    default:
+        return 0;
+    }
 }
 
 // setup lua state and load script for lua env
@@ -493,50 +491,36 @@ lua_sig_load_script(umplg_sh_t *shd, lua_State *L)
     // get lua env
     struct lua_env_d **env = utarray_eltptr(shd->args, 1);
 
-    // load lua script
-    FILE *f = fopen((*env)->path, "r");
-    if (f == NULL) {
-        umd_log(UMD,
-                UMD_LLT_ERROR,
-                "plg_lua: [cannot open Lua scipt (%s)]",
-                (*env)->path);
-        return 2;
-    }
-    if (fseek(f, 0, SEEK_END) < 0) {
-        fclose(f);
-        umd_log(UMD,
-                UMD_LLT_ERROR,
-                "plg_lua: [cannot determine Lua scipt filesize (%s)]",
-                (*env)->path);
-        return 3;
-    }
-    int32_t fsz = ftell(f);
-    if (fsz <= 0) {
-        fclose(f);
-        umd_log(UMD,
-                UMD_LLT_ERROR,
-                "plg_lua: [invalid Lua scipt filesize (%s)]",
-                (*env)->path);
-        return 4;
-    }
-
-    char lua_s[fsz + 1];
-    memset(lua_s, 0, fsz + 1);
-    rewind(f);
-    fread(lua_s, fsz, 1, f);
-    fclose(f);
-
-    // load lua script
-    if (luaL_loadstring(L, lua_s)) {
+    int r = luaL_loadfile(L, (*env)->path);
+    switch (r) {
+    case LUA_ERRSYNTAX:
         umd_log(UMD,
                 UMD_LLT_ERROR,
                 "plg_lua: [cannot load Lua environment (%s)]:%s",
                 (*env)->name,
-                lua_tostring(L, -1));
-        return 5;
-    }
-    return 0;
+                "syntax error during pre-compilation");
 
+        return 1;
+    case LUA_ERRMEM:
+        umd_log(UMD,
+                UMD_LLT_ERROR,
+                "plg_lua: [cannot load Lua environment (%s)]:%s",
+                (*env)->name,
+                "memory allocation error");
+
+        return 2;
+    case LUA_ERRFILE:
+        umd_log(UMD,
+                UMD_LLT_ERROR,
+                "plg_lua: [cannot load Lua environment (%s)]:%s",
+                (*env)->name,
+                "cannot open/read the file");
+
+        return 3;
+
+    default:
+        return 0;
+    }
 }
 
 // setup lua state and load script for lua signal

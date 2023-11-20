@@ -490,8 +490,8 @@ run_signal_w_malformed_lua_script(void **state)
     assert_int_equal(r, 0);
     assert_non_null(b);
     assert_string_equal(b,
-                        "[string \"rsdfeturn \"test_data\"...\"]:1: attempt to "
-                        "call a nil value (global 'rsdfeturn')");
+                        "test/test_event_01_err.lua:1: attempt to call a nil "
+                        "value (global 'rsdfeturn')");
     free(b);
 }
 
