@@ -155,11 +155,6 @@ AC_ARG_ENABLE(openwrt,
 AM_CONDITIONAL(ENABLE_OPENWRT, test "x$enable_openwrt" = "xyes")
 if test "x$enable_openwrt" != "xno"; then
     AC_DEFINE([ENABLE_OPENWRT], [1], [Enable OpenWRT support])
-    AC_CHECK_LIB([ubus],
-                 [ubus_connect],
-                 [AC_SUBST([UBUS_LIBS], ["-lubus"])],
-                 [AC_MSG_ERROR([libubus not found!])])
-
     AC_CHECK_LIB([ubox],
                  [blob_buf_init],
                  [AC_SUBST([UBOX_LIBS], ["-lubox"])],
@@ -169,6 +164,11 @@ if test "x$enable_openwrt" != "xno"; then
                  [blobmsg_add_object],
                  [AC_SUBST([BLOBMSG_JSON_LIBS], ["-lblobmsg_json"])],
                  [AC_MSG_ERROR([libblobmsg_json not found!])])
+
+    AC_CHECK_LIB([ubus],
+                 [ubus_connect],
+                 [AC_SUBST([UBUS_LIBS], ["-lubus"])],
+                 [AC_MSG_ERROR([libubus not found!])])
 fi
 
 # /****************************/
