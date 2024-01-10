@@ -16,13 +16,31 @@
 #include <json_object.h>
 #include <json_tokener.h>
 #include <stdio.h>
+#include <string.h>
+#include <uthash.h>
 
 // mink db
 static char *db_name = NULL;
+// user ban opts
+static struct {
+    uint32_t max_failed_nr;
+    uint32_t failed_time_span;
+    uint32_t ban_duration;
+} user_ban_cfg = { 3, 60, 300 };
 // db manager
 static umdb_mngrd_t *dbm = NULL;
 // plugin id
 static mosquitto_plugin_id_t *mosq_pid = NULL;
+// user failed logins
+struct umuser_d {
+    char *username;
+    time_t first_failed_ts;
+    uint32_t failed_nr;
+    time_t banned_until_ts;
+    UT_hash_handle hh;
+};
+// umusers list
+static struct umuser_d *umusers = NULL;
 
 static int
 cb_pld_mod(int event, void *event_data, void *userdata)
@@ -169,12 +187,75 @@ cb_basic_auth(int event, void *event_data, void *userdata)
         return MOSQ_ERR_AUTH;
     }
 
-    // find user in db
+    // umuser list
     umdb_uauth_d_t uauth;
+    struct umuser_d *umuser = NULL;
+    HASH_FIND_STR(umusers, ed->username, umuser);
+
+    // auth user (success)
     if (!umdb_mngr_uauth(dbm, &uauth, ed->username, ed->password)) {
-        // not found
-        if (uauth.auth != 1) {
+        // unknown user
+        if (uauth.id < 1) {
             return MOSQ_ERR_AUTH;
+
+        // username found, create umuser in the list
+        } else {
+            // create user in umusers list
+            if (umuser == NULL) {
+                umuser = calloc(1, sizeof(struct umuser_d));
+                umuser->username = strdup(ed->username);
+                // add user to the list
+                HASH_ADD_KEYPTR(hh,
+                                umusers,
+                                umuser->username,
+                                strlen(umuser->username),
+                                umuser);
+            }
+        }
+        // check if banned
+        if (umuser->banned_until_ts > 0) {
+            struct timespec clk;
+            clock_gettime(CLOCK_MONOTONIC, &clk);
+            // user still banned
+            if (clk.tv_sec <= umuser->banned_until_ts) {
+                return MOSQ_ERR_AUTH;
+
+            // user no longer banned
+            }else{
+                umuser->banned_until_ts = 0;
+                umuser->failed_nr = 0;
+                umuser->first_failed_ts = 0;
+                return MOSQ_ERR_SUCCESS;
+            }
+        }
+
+        // not authenticated due to wrong password
+        if (uauth.auth != 1) {
+            // inc failed attempt
+            struct timespec clk;
+            clock_gettime(CLOCK_MONOTONIC, &clk);
+            ++umuser->failed_nr;
+            if (umuser->failed_nr == 1) {
+                umuser->first_failed_ts = clk.tv_sec;
+            }
+
+            // reset counters if configured time span
+            // has expired (time period from first failed attempt)
+            if (clk.tv_sec - umuser->first_failed_ts >
+                user_ban_cfg.failed_time_span) {
+
+                umuser->failed_nr = 1;
+                umuser->first_failed_ts = clk.tv_sec;
+            }
+
+            // ban user if threshold reached
+            if (umuser->failed_nr >= user_ban_cfg.max_failed_nr) {
+                umuser->banned_until_ts = clk.tv_sec + user_ban_cfg.ban_duration;
+            }
+
+            return MOSQ_ERR_AUTH;
+
+
         }
 
     } else {
@@ -182,6 +263,11 @@ cb_basic_auth(int event, void *event_data, void *userdata)
                              "plg_mosquitto_auth: cannot authenicate user");
         return MOSQ_ERR_AUTH;
     }
+
+    // reset failed attempt counters
+    umuser->banned_until_ts = 0;
+    umuser->failed_nr = 0;
+    umuser->first_failed_ts = 0;
 
     return MOSQ_ERR_SUCCESS;
 }
@@ -206,10 +292,21 @@ mosquitto_plugin_init(mosquitto_plugin_id_t *identifier,
 {
     // process options
     for (int i = 0; i < opt_count; i++) {
+        // mink db
         if (strncmp(opts[i].key, "db_name", 7) == 0) {
             db_name = opts[i].value;
+        // max failed login attempts
+        } else if (strncmp(opts[i].key, "max_failed_logins", 17) == 0) {
+            user_ban_cfg.max_failed_nr = atoi(opts[i].value);
+        // failed login check time span
+        } else if (strncmp(opts[i].key, "failed_login_time_span", 22) == 0) {
+            user_ban_cfg.failed_time_span = atoi(opts[i].value);
+        // user ban duration
+        } else if (strncmp(opts[i].key, "failed_login_ban_duration", 26) == 0) {
+            user_ban_cfg.ban_duration = atoi(opts[i].value);
         }
     }
+
     // missing db options
     if (db_name == NULL) {
         mosquitto_log_printf(MOSQ_LOG_ERR,
@@ -283,6 +380,16 @@ mosquitto_plugin_cleanup(void *user_data,
                                       NULL);
 
         umdb_mngr_free(dbm);
+
+        struct umuser_d *umuser;
+        struct umuser_d *umuser_tmp;
+
+        HASH_ITER(hh, umusers, umuser, umuser_tmp)
+        {
+            HASH_DEL(umusers, umuser);
+            free(umuser->username);
+            free(umuser);
+        }
     }
 
     return MOSQ_ERR_SUCCESS;
