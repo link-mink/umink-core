@@ -8,6 +8,7 @@
  *
  */
 
+#include <umink_pkg_config.h>
 #include <string.h>
 #include <mosquitto_broker.h>
 #include <mosquitto.h>
