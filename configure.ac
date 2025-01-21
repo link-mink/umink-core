@@ -93,6 +93,10 @@ if test "x$enable_mosquitto_auth" != "xno"; then
                         #error "mosquitto_plugin v5 required"
                         #endif
                        ])], [mosquitto_plg_v5=yes])
+    AC_CHECK_LIB([jwt],
+                 [jwt_decode],
+                 [AC_SUBST([JWT_LIBS], ["-ljwt"])],
+                 [AC_MSG_ERROR([libjwt not found!])])
 fi
 AM_CONDITIONAL(ENABLE_MOSQUITTO_PLUGIN_V5, test "x$mosquitto_plg_v5" = "xyes")
 if test "x$mosquitto_plg_v5" = "xyes"; then

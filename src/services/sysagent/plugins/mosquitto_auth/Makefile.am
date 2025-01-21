@@ -17,5 +17,6 @@ plg_mosquitto_auth_v5_la_LDFLAGS = -version-info 1:0:0 \
                                    -module \
                                    -export-dynamic
 plg_mosquitto_auth_v5_la_LIBADD = libumdb.la \
-				  ${JSON_C_LIBS}
+				  ${JSON_C_LIBS} \
+				  ${JWT_LIBS}
 endif

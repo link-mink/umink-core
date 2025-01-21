@@ -89,6 +89,11 @@ umdb_mngr_uauth(umdb_mngrd_t *m,
                 const char *u,
                 const char *p)
 {
+    // skip if already authenticated
+    if (res && res->auth == 1) {
+        return 0;
+    }
+
     if (m == NULL || m->db == NULL || res == NULL || u == NULL || p == NULL) {
         return 1;
     }

@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <uthash.h>
+#include <jwt.h>
 
 // mink db
 static char *db_name = NULL;
@@ -179,22 +180,93 @@ cb_acl_check(int event, void *event_data, void *userdata)
 }
 
 static int
+jwt_parse(char *data, umdb_uauth_d_t *uauth)
+{
+    if (data == NULL || uauth == NULL) {
+        return 1;
+    }
+    int res = 0;
+    json_object *j = json_tokener_parse(data);
+    if (j == NULL) {
+        res = 1;
+
+    } else {
+        json_object *j_usr_id = json_object_object_get(j, "usr_id");
+        json_object *j_usr = json_object_object_get(j, "usr");
+        json_object *j_usr_flgs = json_object_object_get(j, "usr_flgs");
+        if (j_usr_id == NULL || j_usr == NULL) {
+            res = 1;
+
+        } else {
+            uauth->auth = 1;
+            uauth->usr = strdup(json_object_get_string(j_usr));
+            uauth->id = json_object_get_int(j_usr_id);
+            uauth->flags = json_object_get_int(j_usr_flgs);
+        }
+    }
+
+    json_object_put(j);
+
+    return res;
+}
+
+static int
 cb_basic_auth(int event, void *event_data, void *userdata)
 {
     struct mosquitto_evt_basic_auth *ed = event_data;
 
-    // anonymous not allowed
-    if (ed->username == NULL || ed->password == NULL) {
-        return MOSQ_ERR_AUTH;
+    // - anonymous not allowed
+    // - empty password is allowed since JWT tokens are
+    //   transmitted via username field
+    if (ed->username == NULL) {
+         return MOSQ_ERR_AUTH;
+    }
+    // uauth info
+    umdb_uauth_d_t uauth = { .auth = 0, .flags = -1, .id = 0, .usr = NULL };
+    const char *username = ed->username;
+    bool use_jwt = false;
+
+    // JWT
+    jwt_valid_t *jwt_vld = NULL;
+    jwt_t *jwt = NULL;
+
+    // JWT load public key
+    FILE *fp = fopen("/tmp/pub.key", "r");
+    unsigned char pub_key[2048];
+    size_t pub_key_l = fread(pub_key, 1, sizeof(pub_key), fp);
+    pub_key[pub_key_l] = '\0';
+    fclose(fp);
+
+    // JWT setup validator
+    int res = jwt_valid_new(&jwt_vld, JWT_ALG_RS256);
+    if (res != 0 || jwt_vld == NULL) {
+         return MOSQ_ERR_AUTH;
+    }
+    jwt_valid_set_headers(jwt_vld, 1);
+    jwt_valid_set_now(jwt_vld, time(NULL));
+
+    // decode JWT
+    res = jwt_decode(&jwt, username, pub_key, pub_key_l);
+    if (res != 0 || jwt == NULL) {
+         uauth.auth = 0;
+         free((char *)uauth.usr);
+
+    // useing JWT, assume successful authentication
+    } else {
+         // JWT decoded, now validate it
+         if (jwt_validate(jwt, jwt_vld) == 0 &&
+             jwt_parse(jwt_get_grants_json(jwt, NULL), &uauth) == 0) {
+                use_jwt = true;
+                username = uauth.usr;
+         }
     }
 
     // umuser list
-    umdb_uauth_d_t uauth;
     struct umuser_d *umuser = NULL;
-    HASH_FIND_STR(umusers, ed->username, umuser);
+    HASH_FIND_STR(umusers, username, umuser);
 
-    // auth user (success)
-    if (!umdb_mngr_uauth(dbm, &uauth, ed->username, ed->password)) {
+    // auth user (success), in case of JWT this method will always succeed
+    if (!umdb_mngr_uauth(dbm, &uauth, username, ed->password)) {
         // unknown user
         if (uauth.id < 1) {
             return MOSQ_ERR_AUTH;
@@ -204,7 +276,7 @@ cb_basic_auth(int event, void *event_data, void *userdata)
             // create user in umusers list
             if (umuser == NULL) {
                 umuser = calloc(1, sizeof(struct umuser_d));
-                umuser->username = strdup(ed->username);
+                umuser->username = strdup(username);
                 // add user to the list
                 HASH_ADD_KEYPTR(hh,
                                 umusers,
@@ -219,15 +291,19 @@ cb_basic_auth(int event, void *event_data, void *userdata)
             clock_gettime(CLOCK_MONOTONIC, &clk);
             // user still banned
             if (clk.tv_sec <= umuser->banned_until_ts) {
-                return MOSQ_ERR_AUTH;
+                res = MOSQ_ERR_AUTH;
 
             // user no longer banned
             }else{
                 umuser->banned_until_ts = 0;
                 umuser->failed_nr = 0;
                 umuser->first_failed_ts = 0;
-                return MOSQ_ERR_SUCCESS;
+                res = MOSQ_ERR_SUCCESS;
             }
+            if (use_jwt) {
+                free((char *)username);
+            }
+            return res;
         }
 
         // not authenticated due to wrong password
@@ -269,6 +345,9 @@ cb_basic_auth(int event, void *event_data, void *userdata)
     umuser->banned_until_ts = 0;
     umuser->failed_nr = 0;
     umuser->first_failed_ts = 0;
+    if (use_jwt) {
+        free((char *)username);
+    }
 
     return MOSQ_ERR_SUCCESS;
 }
