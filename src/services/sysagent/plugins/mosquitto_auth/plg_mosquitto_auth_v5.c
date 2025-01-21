@@ -41,6 +41,9 @@ struct umuser_d {
     time_t banned_until_ts;
     UT_hash_handle hh;
 };
+// jwt options
+static char *jwt_public_key = NULL;
+static char *jwt_private_key = NULL;
 // umusers list
 static struct umuser_d *umusers = NULL;
 
@@ -231,7 +234,10 @@ cb_basic_auth(int event, void *event_data, void *userdata)
     jwt_t *jwt = NULL;
 
     // JWT load public key
-    FILE *fp = fopen("/tmp/pub.key", "r");
+    FILE *fp = fopen(jwt_public_key, "r");
+    if (fp == NULL) {
+         return MOSQ_ERR_AUTH;
+    }
     unsigned char pub_key[2048];
     size_t pub_key_l = fread(pub_key, 1, sizeof(pub_key), fp);
     pub_key[pub_key_l] = '\0';
@@ -384,7 +390,14 @@ mosquitto_plugin_init(mosquitto_plugin_id_t *identifier,
         // user ban duration
         } else if (strncmp(opts[i].key, "failed_login_ban_duration", 26) == 0) {
             user_ban_cfg.ban_duration = atoi(opts[i].value);
+        // jwt public key
+        } else if (strncmp(opts[i].key, "jwt_public_key", 14) == 0) {
+            jwt_public_key = opts[i].value;
+        // jwt private key
+        } else if (strncmp(opts[i].key, "jwt_private_key", 15) == 0) {
+            jwt_private_key = opts[i].value;
         }
+
     }
 
     // missing db options
