@@ -8,6 +8,7 @@
  *
  */
 
+#include <time.h>
 #include <umink_pkg_config.h>
 #include <string.h>
 #include <mosquitto_broker.h>
@@ -44,6 +45,7 @@ struct umuser_d {
 // jwt options
 static char *jwt_public_key = NULL;
 static char *jwt_private_key = NULL;
+static int jwt_exp = 600;
 // umusers list
 static struct umuser_d *umusers = NULL;
 
@@ -183,11 +185,12 @@ cb_acl_check(int event, void *event_data, void *userdata)
 }
 
 static int
-jwt_parse(char *data, umdb_uauth_d_t *uauth)
+jwt_parse(char *data, umdb_uauth_d_t *uauth, int *iat)
 {
     if (data == NULL || uauth == NULL) {
         return 1;
     }
+    printf("DATA: %s\n", data);
     int res = 0;
     json_object *j = json_tokener_parse(data);
     if (j == NULL) {
@@ -197,7 +200,8 @@ jwt_parse(char *data, umdb_uauth_d_t *uauth)
         json_object *j_usr_id = json_object_object_get(j, "usr_id");
         json_object *j_usr = json_object_object_get(j, "usr");
         json_object *j_usr_flgs = json_object_object_get(j, "usr_flgs");
-        if (j_usr_id == NULL || j_usr == NULL) {
+        json_object *j_iat = json_object_object_get(j, "iat");
+        if (j_usr_id == NULL || j_usr == NULL || j_iat == NULL) {
             res = 1;
 
         } else {
@@ -205,6 +209,7 @@ jwt_parse(char *data, umdb_uauth_d_t *uauth)
             uauth->usr = strdup(json_object_get_string(j_usr));
             uauth->id = json_object_get_int(j_usr_id);
             uauth->flags = json_object_get_int(j_usr_flgs);
+            *iat= json_object_get_int(j_iat);
         }
     }
 
@@ -259,11 +264,24 @@ cb_basic_auth(int event, void *event_data, void *userdata)
 
     // useing JWT, assume successful authentication
     } else {
+        int iat = 0;
          // JWT decoded, now validate it
          if (jwt_validate(jwt, jwt_vld) == 0 &&
-             jwt_parse(jwt_get_grants_json(jwt, NULL), &uauth) == 0) {
+             jwt_parse(jwt_get_grants_json(jwt, NULL), &uauth, &iat) == 0) {
+
+            // check if expired
+            time_t now = time(NULL);
+
+            // not expired
+            if (iat + jwt_exp > now) {
                 use_jwt = true;
                 username = uauth.usr;
+
+            // expired
+            } else {
+                 uauth.auth = 0;
+                 free((char *)uauth.usr);
+            }
          }
     }
 
@@ -396,6 +414,9 @@ mosquitto_plugin_init(mosquitto_plugin_id_t *identifier,
         // jwt private key
         } else if (strncmp(opts[i].key, "jwt_private_key", 15) == 0) {
             jwt_private_key = opts[i].value;
+        // jwt expration
+        } else if (strncmp(opts[i].key, "jwt_expiration", 14) == 0) {
+            jwt_exp = atoi(opts[i].value);
         }
 
     }
