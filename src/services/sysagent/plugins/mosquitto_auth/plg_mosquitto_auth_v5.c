@@ -8,7 +8,7 @@
  *
  */
 
-#include <time.h>
+#include <bits/time.h>
 #include <umink_pkg_config.h>
 #include <string.h>
 #include <mosquitto_broker.h>
@@ -18,7 +18,6 @@
 #include <json_object.h>
 #include <json_tokener.h>
 #include <stdio.h>
-#include <string.h>
 #include <uthash.h>
 #include <jwt.h>
 
