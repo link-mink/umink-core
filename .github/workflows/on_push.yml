@@ -43,7 +43,9 @@ jobs:
           libasan5 \
           iproute2 \
           cmake \
-          libxml2-utils
+          libxml2-utils \
+          libjansson-dev \
+          uuid-dev
           sudo ln -s /usr/lib/x86_64-linux-gnu/pkgconfig/lua-5.3.pc \
           /usr/lib/x86_64-linux-gnu/pkgconfig/lua.pc
           pip3 install 'gcovr == 6'
@@ -58,6 +60,14 @@ jobs:
           git clone https://github.com/openwrt/ubus.git
           cd ubus && mkdir ubus && cd ubus
           CC=gcc-13 cmake -DBUILD_LUA=off ..
+          sudo make install
+      - name: libjwt
+        run: |
+          git clone https://github.com/benmcollins/libjwt
+          cd libjwt
+          git checkout v2.1.1
+          mkdir build && cd build
+          CC=gcc-13 CFLAGS="-DHAVE_OPENSSL" cmake -DBUILD_SHARED_LIBS=1 ..
           sudo make install
       - name: mosquitto
         run: |
@@ -91,6 +101,7 @@ jobs:
         run: |
           mkdir coverage-dir
           cd coverage-dir
+          sudo rm /usr/bin/gcov
           sudo ln -s /usr/bin/gcov-13 /usr/bin/gcov
           gcovr --sonarqube coverage.xml -r ..
           cd ..
