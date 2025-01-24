@@ -188,7 +188,6 @@ jwt_parse(char *data, umdb_uauth_d_t *uauth, int *iat)
     if (data == NULL || uauth == NULL) {
         return 1;
     }
-    printf("DATA: %s\n", data);
     int res = 0;
     json_object *j = json_tokener_parse(data);
     if (j == NULL) {
@@ -274,6 +273,7 @@ cb_basic_auth(int event, void *event_data, void *userdata)
             if (iat + jwt_exp > now) {
                 use_jwt = true;
                 username = uauth.usr;
+                mosquitto_set_username(ed->client, username);
 
             // expired
             } else {
